@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Suivi · <%= commande.num_commande %></title>
+  <meta name="theme-color" content="#111827"/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Bricolage+Grotesque:wght@700;800&display=swap');
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Plus Jakarta Sans',sans-serif;background:#0f172a;color:#fff;min-height:100vh;padding-bottom:3rem}
+    a{color:inherit;text-decoration:none}
+    .suivi-header{background:linear-gradient(180deg,#111827 0%,#1e293b 100%);padding:2rem 1.5rem 3rem;text-align:center;position:relative;overflow:hidden}
+    .suivi-header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(245,158,11,.15),transparent 70%)}
+    .back-btn{position:absolute;top:1.25rem;left:1.25rem;display:flex;align-items:center;gap:6px;color:rgba(255,255,255,.5);font-size:13px;font-weight:500;z-index:1;transition:color .2s}
+    .back-btn:hover{color:#fff}
+    .resto-name{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:.5rem;position:relative;z-index:1}
+    .cmd-num{font-family:'Bricolage Grotesque',sans-serif;font-size:1.8rem;font-weight:800;color:#F59E0B;position:relative;z-index:1;letter-spacing:-0.5px}
+    .cmd-date{font-size:13px;color:rgba(255,255,255,.4);margin-top:.3rem;position:relative;z-index:1}
+    .status-badge-wrap{display:flex;justify-content:center;margin-top:1.25rem;position:relative;z-index:1}
+    .status-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 20px;border-radius:999px;font-weight:700;font-size:14px}
+    .status-badge.en_attente{background:rgba(245,158,11,.15);border:1.5px solid rgba(245,158,11,.4);color:#F59E0B}
+    .status-badge.en_preparation{background:rgba(59,130,246,.15);border:1.5px solid rgba(59,130,246,.4);color:#60A5FA}
+    .status-badge.en_livraison{background:rgba(139,92,246,.15);border:1.5px solid rgba(139,92,246,.4);color:#A78BFA}
+    .status-badge.servie,.status-badge.livree{background:rgba(16,185,129,.15);border:1.5px solid rgba(16,185,129,.4);color:#34D399}
+    .status-badge.annulee{background:rgba(239,68,68,.15);border:1.5px solid rgba(239,68,68,.4);color:#F87171}
+    .suivi-body{max-width:520px;margin:-1.5rem auto 0;padding:0 1rem;position:relative;z-index:2}
+    .card{background:#1e293b;border:1px solid rgba(255,255,255,.08);border-radius:20px;margin-bottom:1rem;overflow:hidden}
+    .card-head{padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;color:rgba(255,255,255,.7)}
+    .card-head i{color:#F59E0B}
+    .card-body{padding:1.25rem}
+    .progress-wrap{padding:.75rem 1.25rem 1rem;background:rgba(0,0,0,.15)}
+    .progress-bar-track{background:rgba(255,255,255,.08);border-radius:999px;height:6px;overflow:hidden}
+    .progress-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#F59E0B,#10B981);transition:width 1s ease}
+    .progress-label{font-size:11px;color:rgba(255,255,255,.4);margin-top:6px;text-align:right}
+    .timeline{display:flex;flex-direction:column;gap:0;padding:.25rem 0}
+    .tl-step{display:flex;gap:16px;position:relative}
+    .tl-step:not(:last-child)::before{content:'';position:absolute;left:20px;top:44px;bottom:-8px;width:2px;background:rgba(255,255,255,.08)}
+    .tl-step.done:not(:last-child)::before,.tl-step.active:not(:last-child)::before{background:linear-gradient(180deg,#F59E0B,rgba(245,158,11,.1))}
+    .tl-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;position:relative;z-index:1}
+    .tl-step.done .tl-icon{background:linear-gradient(135deg,#F59E0B,#D97706);color:#111;box-shadow:0 0 16px rgba(245,158,11,.4)}
+    .tl-step.active .tl-icon{background:linear-gradient(135deg,#F59E0B,#D97706);color:#111;box-shadow:0 0 24px rgba(245,158,11,.6);animation:icon-bounce .6s ease-out}
+    .tl-step.pending .tl-icon{background:rgba(255,255,255,.05);color:rgba(255,255,255,.25);border:1.5px solid rgba(255,255,255,.1)}
+    @keyframes icon-bounce{0%{transform:scale(.8)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+    .tl-content{padding-bottom:1.5rem;flex:1}
+    .tl-label{font-weight:700;font-size:14px;color:rgba(255,255,255,.9);margin-top:.5rem}
+    .tl-step.pending .tl-label{color:rgba(255,255,255,.3)}
+    .tl-sub{font-size:12px;color:rgba(255,255,255,.4);margin-top:2px}
+    .tl-step.active .tl-sub,.tl-step.done .tl-sub{color:rgba(255,255,255,.5)}
+    .cancel-wrap{padding:1rem 1.25rem;background:rgba(239,68,68,.06);border-top:1px solid rgba(239,68,68,.12)}
+    .cancel-timer{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .timer-circle{width:44px;height:44px;position:relative;flex-shrink:0}
+    .timer-circle svg{transform:rotate(-90deg)}
+    .timer-track{fill:none;stroke:rgba(255,255,255,.08);stroke-width:3}
+    .timer-fill{fill:none;stroke:#EF4444;stroke-width:3;stroke-linecap:round;transition:stroke-dashoffset 1s linear}
+    .timer-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#F87171}
+    .cancel-text{flex:1;font-size:13px;color:rgba(255,255,255,.6)}
+    .cancel-text strong{color:#F87171;display:block}
+    .btn-cancel{width:100%;padding:10px;background:rgba(239,68,68,.15);border:1.5px solid rgba(239,68,68,.3);border-radius:10px;color:#F87171;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;transition:all .2s}
+    .btn-cancel:hover{background:rgba(239,68,68,.25)}
+    .btn-cancel:disabled{opacity:.4;cursor:not-allowed}
+    .item-line{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:14px}
+    .item-line:last-child{border:none}
+    .qty-tag{background:#F59E0B;color:#111;font-weight:800;font-size:11px;padding:2px 8px;border-radius:4px;min-width:26px;text-align:center;flex-shrink:0}
+    .total-row{display:flex;justify-content:space-between;padding:12px 0 0;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.1rem;border-top:1px solid rgba(255,255,255,.08);margin-top:4px}
+    .total-row span:last-child{color:#F59E0B}
+    .livreur-box{display:flex;align-items:center;gap:12px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:12px;padding:12px}
+    .livreur-av{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#A78BFA);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+    .info-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px}
+    .info-row:last-child{border:none}
+    .info-label{color:rgba(255,255,255,.4)}
+    .info-val{font-weight:600;color:#fff;text-align:right}
+    .actions-row{display:flex;gap:10px;margin-top:.5rem}
+    .action-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:13px;border-radius:12px;font-weight:700;font-size:13px;border:none;cursor:pointer;font-family:inherit;transition:all .2s}
+    .btn-dark{background:#334155;color:#fff}.btn-dark:hover{background:#475569}
+    .btn-gold{background:#F59E0B;color:#111}.btn-gold:hover{background:#D97706}
+    .cancelled-banner{background:rgba(239,68,68,.1);border:1.5px solid rgba(239,68,68,.2);border-radius:12px;padding:1rem;text-align:center;color:#F87171;font-weight:700}
+    .toast-bar{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(100px);background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px 20px;font-size:14px;font-weight:600;color:#fff;z-index:9999;transition:transform .35s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 10px 40px rgba(0,0,0,.5);white-space:nowrap}
+    .toast-bar.show{transform:translateX(-50%) translateY(0)}
+    .toast-bar.success{border-color:rgba(16,185,129,.3);color:#34D399}
+    .toast-bar.error{border-color:rgba(239,68,68,.3);color:#F87171}
+  </style>
+</head>
+<body>
+<div class="suivi-header">
+  <a href="/menu/<%= restaurant._id %>" class="back-btn"><i class="bi bi-arrow-left"></i> Menu</a>
+  <div class="resto-name">🍽️ <%= restaurant.nom %></div>
+  <div class="cmd-num"><%= commande.num_commande %></div>
+  <div class="cmd-date"><%= new Date(commande.createdAt).toLocaleString('fr-FR',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}) %></div>
+  <div class="status-badge-wrap">
+    <% const statusMap = {en_attente:'⏳ En attente',en_preparation:'👨‍🍳 En préparation',en_livraison:'🛵 En route',servie:'✅ Servie',livree:'✅ Livrée',annulee:'❌ Annulée'}; %>
+    <div class="status-badge <%= commande.statut %>"><%= statusMap[commande.statut] || commande.statut %></div>
+  </div>
+</div>
+
+<div class="suivi-body">
+  <div class="card">
+    <div class="card-head"><i class="bi bi-map"></i> Suivi de votre commande</div>
+    <div class="progress-wrap">
+      <% const progressMap={en_attente:15,en_preparation:40,en_livraison:75,servie:100,livree:100,annulee:0}; const pct=progressMap[commande.statut]||0; %>
+      <div class="progress-bar-track"><div class="progress-bar-fill" style="width:<%=pct%>%"></div></div>
+      <div class="progress-label"><%=pct%>% complété</div>
+    </div>
+    <div class="card-body">
+      <%
+        const isLivraison = commande.type_livraison === 'livraison';
+        const steps = [
+          {key:'en_attente',    label:'Commande reçue',  sub:'Votre commande est enregistrée',         icon:'bi-check-circle-fill'},
+          {key:'en_preparation',label:'En préparation',  sub:'Notre équipe prépare votre commande',    icon:'bi-fire'},
+          {key:'en_livraison',  label: isLivraison?'En route':'Prête',  sub:isLivraison?'Votre livreur est en chemin':'Votre commande est prête', icon:isLivraison?'bi-scooter':'bi-bell-fill'},
+          {key:'livree',        label: isLivraison?'Livrée':'Servie',   sub:'Bonne dégustation ! 🎉',  icon:isLivraison?'bi-house-check-fill':'bi-check2-all'}
+        ];
+        const order=['en_attente','en_preparation','en_livraison','livree','servie'];
+        const curIdx=order.indexOf(commande.statut);
+      %>
+      <div class="timeline">
+        <% steps.forEach((step,i) => {
+          const stepIdx=order.indexOf(step.key);
+          const isDone=curIdx>stepIdx||((['servie','livree'].includes(commande.statut))&&step.key==='livree');
+          const isActive=(commande.statut===step.key)||(commande.statut==='servie'&&step.key==='livree');
+          const cls=isDone?'done':isActive?'active':'pending';
+        %>
+          <div class="tl-step <%=cls%>">
+            <div class="tl-icon"><i class="bi <%=step.icon%>"></i></div>
+            <div class="tl-content">
+              <div class="tl-label"><%=step.label%></div>
+              <div class="tl-sub"><%=isActive?step.sub:(isDone?'Terminé ✓':'En attente…')%></div>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+      <% if(commande.statut==='annulee'){%><div class="cancelled-banner" style="margin-top:1rem"><i class="bi bi-x-circle"></i> Commande annulée<% if(commande.annulee_par==='client'){%> par vous<%}%></div><%}%>
+    </div>
+    <% if(commande.statut==='en_attente'){%>
+    <div class="cancel-wrap" id="cancelWrap">
+      <div class="cancel-timer">
+        <div class="timer-circle">
+          <svg width="44" height="44" viewBox="0 0 44 44"><circle class="timer-track" cx="22" cy="22" r="18"/><circle class="timer-fill" id="timerArc" cx="22" cy="22" r="18" stroke-dasharray="113" stroke-dashoffset="0"/></svg>
+          <div class="timer-num" id="timerNum">5:00</div>
+        </div>
+        <div class="cancel-text"><strong>Annulation possible</strong>Vous pouvez annuler dans ce délai</div>
+      </div>
+      <button class="btn-cancel" id="btnAnnuler" onclick="annulerCommande()"><i class="bi bi-x-circle"></i> Annuler ma commande</button>
+    </div>
+    <%}%>
+  </div>
+
+  <% if(livreur&&commande.statut==='en_livraison'){%>
+  <div class="card">
+    <div class="card-head"><i class="bi bi-scooter"></i> Votre livreur</div>
+    <div class="card-body">
+      <div class="livreur-box">
+        <div class="livreur-av">🛵</div>
+        <div style="flex:1"><div style="font-weight:700;font-size:15px"><%=livreur.nom%></div><a href="tel:<%=livreur.telephone%>" style="font-size:13px;color:#A78BFA;font-weight:600"><i class="bi bi-telephone"></i> <%=livreur.telephone%></a><% if(livreur.moto){%><div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px">🏍️ <%=livreur.moto%></div><%}%></div>
+        <a href="tel:<%=livreur.telephone%>" style="width:40px;height:40px;background:rgba(139,92,246,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#A78BFA;font-size:1.1rem"><i class="bi bi-telephone-fill"></i></a>
+      </div>
+    </div>
+  </div>
+  <%}%>
+
+  <div class="card">
+    <div class="card-head"><i class="bi bi-receipt"></i> Détail</div>
+    <div class="card-body">
+      <% commande.items.forEach(item=>{%>
+        <div class="item-line"><span class="qty-tag"><%=item.quantite%>×</span><span style="flex:1;color:rgba(255,255,255,.85)"><%=item.nom%></span><span style="font-weight:600;color:rgba(255,255,255,.5)"><%=(item.prix*item.quantite).toLocaleString('fr-FR')%> F</span></div>
+      <%});%>
+      <% if(commande.reduction>0){%><div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;color:#34D399"><span>🎁 Promo <%=commande.promo_code%></span><span>-<%=commande.reduction.toLocaleString('fr-FR')%> FCFA</span></div><%}%>
+      <div class="total-row"><span>Total</span><span><%=commande.total.toLocaleString('fr-FR')%> FCFA</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><i class="bi bi-person"></i> Informations</div>
+    <div class="card-body">
+      <div class="info-row"><span class="info-label">Client</span><span class="info-val"><%=commande.client_nom%></span></div>
+      <%if(commande.client_telephone){%><div class="info-row"><span class="info-label">Téléphone</span><span class="info-val"><%=commande.client_telephone%></span></div><%}%>
+      <div class="info-row"><span class="info-label">Type</span><span class="info-val"><%=commande.type_livraison==='livraison'?'🛵 Livraison':commande.type_livraison==='a_emporter'?'🛍️ À emporter':'🪑 Sur place'%></span></div>
+      <%if(commande.type_livraison==='livraison'&&commande.client_adresse){%><div class="info-row"><span class="info-label">Adresse</span><span class="info-val"><%=commande.client_adresse%><%if(commande.client_quartier){%>, <%=commande.client_quartier%><%}%></span></div><%}%>
+      <%if(commande.client_table){%><div class="info-row"><span class="info-label">Table</span><span class="info-val"><%=commande.client_table%></span></div><%}%>
+      <div class="info-row"><span class="info-label">Paiement</span><span class="info-val"><%=commande.paiement==='mtn'?'📱 MTN Money':commande.paiement==='orange'?'🟠 Orange Money':'💬 WhatsApp'%></span></div>
+    </div>
+  </div>
+  <%if(commande.note){%><div class="card"><div class="card-body"><span style="color:rgba(255,255,255,.4);font-size:13px"><i class="bi bi-chat-text"></i> <strong style="color:rgba(255,255,255,.6)">Note :</strong> <%=commande.note%></span></div></div><%}%>
+
+  <div class="actions-row">
+    <a href="/commandes/<%= commande._id %>/recu" target="_blank" class="action-btn btn-dark"><i class="bi bi-file-earmark-pdf"></i> Reçu PDF</a>
+    <a href="/menu/<%= restaurant._id %>" class="action-btn btn-gold"><i class="bi bi-arrow-repeat"></i> Recommander</a>
+  </div>
+</div>
+
+<div class="toast-bar" id="toastBar"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const NUM_COMMANDE='<%= commande.num_commande %>';
+const COMMANDE_ID='<%= commande._id %>';
+const STATUT_ACTUEL='<%= commande.statut %>';
+const CREATED_AT=new Date('<%= commande.createdAt %>').getTime();
+const DELAI_MS=5*60*1000;
+
+function showToast(msg,type=''){
+  const t=document.getElementById('toastBar');
+  t.textContent=msg;t.className=`toast-bar ${type} show`;
+  setTimeout(()=>t.classList.remove('show'),4000);
+}
+
+const socket=io();
+socket.on('statut_commande',data=>{
+  if(data.commande_id!==COMMANDE_ID)return;
+  const labels={en_attente:'⏳ En attente',en_preparation:'👨‍🍳 En préparation',en_livraison:'🛵 En route',servie:'✅ Servie',livree:'✅ Livrée',annulee:'❌ Annulée'};
+  showToast(labels[data.statut]||data.statut,['servie','livree'].includes(data.statut)?'success':'');
+  setTimeout(()=>location.reload(),1200);
+});
+
+if(STATUT_ACTUEL==='en_attente'){
+  const timerNum=document.getElementById('timerNum');
+  const timerArc=document.getElementById('timerArc');
+  const btnAnnuler=document.getElementById('btnAnnuler');
+  const CIRCUM=2*Math.PI*18;
+  function updateTimer(){
+    const elapsed=Date.now()-CREATED_AT;
+    const restant=Math.max(0,DELAI_MS-elapsed);
+    const secs=Math.ceil(restant/1000);
+    const min=Math.floor(secs/60).toString().padStart(2,'0');
+    const sec=(secs%60).toString().padStart(2,'0');
+    if(timerNum)timerNum.textContent=`${min}:${sec}`;
+    if(timerArc)timerArc.style.strokeDashoffset=CIRCUM*(1-restant/DELAI_MS);
+    if(restant<=0){clearInterval(timerInterval);if(btnAnnuler){btnAnnuler.disabled=true;btnAnnuler.textContent='⏱️ Délai expiré';}}
+  }
+  updateTimer();
+  const timerInterval=setInterval(updateTimer,1000);
+  fetch(`/commandes/${NUM_COMMANDE}/delai-annulation`).then(r=>r.json()).then(d=>{if(!d.annulable&&btnAnnuler){btnAnnuler.disabled=true;btnAnnuler.textContent='Annulation impossible';}});
+}
+
+async function annulerCommande(){
+  if(!confirm('Voulez-vous vraiment annuler votre commande ?'))return;
+  const btn=document.getElementById('btnAnnuler');
+  if(btn)btn.disabled=true;
+  try{
+    const res=await fetch(`/commandes/${NUM_COMMANDE}/annuler-client`,{method:'POST',headers:{'Content-Type':'application/json'}});
+    const data=await res.json();
+    if(data.ok){showToast('✅ Commande annulée','success');setTimeout(()=>location.reload(),1500);}
+    else{showToast(data.message||'Annulation impossible','error');if(btn)btn.disabled=false;}
+  }catch(e){showToast('Erreur réseau','error');if(btn)btn&&(btn.disabled=false);}
+}
+</script>
+</body></html>
