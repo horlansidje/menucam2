@@ -1,0 +1,241 @@
+<%
+  // Paramètres optionnels à passer depuis la vue parente :
+  // chatbotRestaurantId    — ID du restaurant (pour contexte menu/horaires)
+  // chatbotRestaurantNom   — Nom du restaurant (pour personnalisation)
+  // chatbotTheme           — 'client' (défaut) ou 'admin'
+  const _restoId  = typeof chatbotRestaurantId  !== 'undefined' ? chatbotRestaurantId  : (typeof restaurantId  !== 'undefined' ? restaurantId  : '');
+  const _restoNom = typeof chatbotRestaurantNom !== 'undefined' ? chatbotRestaurantNom : (typeof restaurantNom !== 'undefined' ? restaurantNom : 'MenuCam');
+  const _theme    = typeof chatbotTheme         !== 'undefined' ? chatbotTheme         : 'client';
+%>
+
+<!-- ═══════════════════════════════════════════
+     CHATBOT WIDGET — MenuCam Assistant IA
+═══════════════════════════════════════════ -->
+<link rel="stylesheet" href="/css/chatbot.css"/>
+
+<!-- Bouton flottant -->
+<button id="chatbotToggle" class="chatbot-toggle chatbot-theme-<%= _theme %>" aria-label="Ouvrir l'assistant">
+  <span class="chatbot-toggle-icon open"><i class="bi bi-chat-dots-fill"></i></span>
+  <span class="chatbot-toggle-icon close" style="display:none"><i class="bi bi-x-lg"></i></span>
+  <span class="chatbot-badge" id="chatbotBadge" style="display:none">1</span>
+</button>
+
+<!-- Fenêtre chat -->
+<div id="chatbotWindow" class="chatbot-window chatbot-theme-<%= _theme %>" style="display:none" role="dialog" aria-label="Assistant MenuCam">
+  <!-- En-tête -->
+  <div class="chatbot-header">
+    <div class="chatbot-header-info">
+      <div class="chatbot-avatar"><i class="bi bi-robot"></i></div>
+      <div>
+        <div class="chatbot-header-name">Assistant MenuCam</div>
+        <div class="chatbot-header-status"><span class="chatbot-status-dot"></span> En ligne</div>
+      </div>
+    </div>
+    <div class="chatbot-header-actions">
+      <button class="chatbot-clear-btn" id="chatbotClear" title="Nouvelle conversation"><i class="bi bi-arrow-counterclockwise"></i></button>
+      <button class="chatbot-close-btn" id="chatbotClose"><i class="bi bi-x-lg"></i></button>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div class="chatbot-messages" id="chatbotMessages">
+    <div class="chatbot-msg chatbot-msg-bot">
+      <div class="chatbot-msg-bubble">
+        👋 Bonjour ! Je suis l'assistant de <strong><%= _restoNom %></strong>.<br>
+        Je peux vous aider pour le menu, les commandes, les horaires, la livraison, ou tout autre problème. Comment puis-je vous aider ?
+      </div>
+      <div class="chatbot-msg-time"><%= new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) %></div>
+    </div>
+  </div>
+
+  <!-- Suggestions rapides -->
+  <div class="chatbot-suggestions" id="chatbotSuggestions">
+    <button class="chatbot-chip" data-msg="Quels sont vos horaires d'ouverture ?">🕐 Horaires</button>
+    <button class="chatbot-chip" data-msg="Proposez-vous la livraison à domicile ?">🛵 Livraison</button>
+    <button class="chatbot-chip" data-msg="Quelles sont vos promotions en cours ?">🏷️ Promos</button>
+    <button class="chatbot-chip" data-msg="J'ai un problème avec ma commande">⚠️ Problème</button>
+  </div>
+
+  <!-- Zone de saisie -->
+  <div class="chatbot-input-area">
+    <textarea
+      id="chatbotInput"
+      class="chatbot-input"
+      placeholder="Écrivez votre message..."
+      rows="1"
+      maxlength="500"
+      aria-label="Message"
+    ></textarea>
+    <button id="chatbotSend" class="chatbot-send-btn" aria-label="Envoyer">
+      <i class="bi bi-send-fill"></i>
+    </button>
+  </div>
+  <div class="chatbot-footer">Propulsé par MenuCam IA • <span id="chatbotCharCount">0</span>/500</div>
+</div>
+
+<script>
+(function() {
+  const RESTAURANT_ID  = '<%= _restoId %>';
+  const RESTAURANT_NOM = '<%= _restoNom.replace(/'/g, "\\'") %>';
+
+  const toggle   = document.getElementById('chatbotToggle');
+  const window_  = document.getElementById('chatbotWindow');
+  const closeBtn = document.getElementById('chatbotClose');
+  const clearBtn = document.getElementById('chatbotClear');
+  const input    = document.getElementById('chatbotInput');
+  const sendBtn  = document.getElementById('chatbotSend');
+  const messages = document.getElementById('chatbotMessages');
+  const suggs    = document.getElementById('chatbotSuggestions');
+  const badge    = document.getElementById('chatbotBadge');
+  const charCount= document.getElementById('chatbotCharCount');
+
+  let historique = []; // [{role, content}]
+  let isOpen = false;
+  let enChargement = false;
+  let nouveauMsg = false;
+
+  // ── Ouvrir / Fermer ──────────────────────────────────────
+  function toggleChat() {
+    isOpen = !isOpen;
+    window_.style.display = isOpen ? 'flex' : 'none';
+    toggle.querySelector('.open').style.display = isOpen ? 'none' : 'inline';
+    toggle.querySelector('.close').style.display = isOpen ? 'inline' : 'none';
+    if (isOpen) {
+      badge.style.display = 'none';
+      nouveauMsg = false;
+      input.focus();
+      scrollBas();
+    }
+  }
+
+  toggle.addEventListener('click', toggleChat);
+  closeBtn.addEventListener('click', toggleChat);
+
+  // ── Réinitialiser conversation ───────────────────────────
+  clearBtn.addEventListener('click', () => {
+    historique = [];
+    messages.innerHTML = `
+      <div class="chatbot-msg chatbot-msg-bot">
+        <div class="chatbot-msg-bubble">👋 Nouvelle conversation. Comment puis-je vous aider ?</div>
+        <div class="chatbot-msg-time">${heure()}</div>
+      </div>`;
+    suggs.style.display = 'flex';
+    scrollBas();
+  });
+
+  // ── Suggestions rapides ──────────────────────────────────
+  document.querySelectorAll('.chatbot-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      envoyerMessage(chip.dataset.msg);
+      suggs.style.display = 'none';
+    });
+  });
+
+  // ── Saisie ───────────────────────────────────────────────
+  input.addEventListener('input', () => {
+    charCount.textContent = input.value.length;
+    // Auto-resize
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      envoyerMessage();
+    }
+  });
+
+  sendBtn.addEventListener('click', () => envoyerMessage());
+
+  // ── Envoi message ────────────────────────────────────────
+  async function envoyerMessage(texte) {
+    const msg = (texte || input.value).trim();
+    if (!msg || enChargement) return;
+
+    suggs.style.display = 'none';
+    ajouterMessage('user', msg);
+    historique.push({ role: 'user', content: msg });
+
+    input.value = '';
+    input.style.height = 'auto';
+    charCount.textContent = '0';
+
+    // Indicateur de frappe
+    const typing = ajouterTyping();
+    enChargement = true;
+    sendBtn.disabled = true;
+
+    try {
+      const resp = await fetch('/chatbot/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: historique,
+          restaurantId: RESTAURANT_ID,
+          restaurantNom: RESTAURANT_NOM,
+        }),
+      });
+
+      const data = await resp.json();
+      const reponse = data.reponse || "Désolé, je n'ai pas pu traiter votre demande.";
+
+      typing.remove();
+      ajouterMessage('bot', reponse);
+      historique.push({ role: 'assistant', content: reponse });
+
+      // Afficher badge si fenêtre fermée
+      if (!isOpen) {
+        badge.style.display = 'flex';
+        nouveauMsg = true;
+      }
+    } catch (err) {
+      typing.remove();
+      ajouterMessage('bot', "⚠️ Une erreur de connexion s'est produite. Vérifiez votre connexion et réessayez.");
+    } finally {
+      enChargement = false;
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  }
+
+  // ── Ajouter message dans le DOM ──────────────────────────
+  function ajouterMessage(role, texte) {
+    const div = document.createElement('div');
+    div.className = `chatbot-msg chatbot-msg-${role === 'user' ? 'user' : 'bot'}`;
+    div.innerHTML = `
+      <div class="chatbot-msg-bubble">${formaterTexte(texte)}</div>
+      <div class="chatbot-msg-time">${heure()}</div>`;
+    messages.appendChild(div);
+    scrollBas();
+    return div;
+  }
+
+  // ── Indicateur "en train d'écrire" ──────────────────────
+  function ajouterTyping() {
+    const div = document.createElement('div');
+    div.className = 'chatbot-msg chatbot-msg-bot chatbot-typing';
+    div.innerHTML = `<div class="chatbot-msg-bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
+    messages.appendChild(div);
+    scrollBas();
+    return div;
+  }
+
+  // ── Formater le texte (markdown basique) ─────────────────
+  function formaterTexte(t) {
+    return t
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/\n/g, '<br>');
+  }
+
+  function heure() {
+    return new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function scrollBas() {
+    setTimeout(() => { messages.scrollTop = messages.scrollHeight; }, 50);
+  }
+})();
+</script>
