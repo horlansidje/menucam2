@@ -1,0 +1,59 @@
+<%- include('../partials/head', {title:'Analytics'}) %>
+<%- include('../partials/sidebar', {activePage:'analytics'}) %>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<div class="main-content">
+  <div class="topbar"><div class="topbar-left"><button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button><div class="topbar-title">Analytics</div></div>
+    <div class="topbar-right">
+      <button onclick="changePeriode(7)"  id="btn7"  class="btn btn-sm btn-primary">7 jours</button>
+      <button onclick="changePeriode(30)" id="btn30" class="btn btn-sm btn-secondary">30 jours</button>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="stats-row">
+      <div class="stat-card stat-brand"><div class="stat-card-icon" style="background:#FEF3C7;color:#D97706"><i class="bi bi-wallet2" style="font-size:1.3rem"></i></div><div class="stat-card-value"><%=stats.caTotal.toLocaleString('fr-FR')%></div><div class="stat-card-label">CA total (FCFA)</div></div>
+      <div class="stat-card stat-green"><div class="stat-card-icon" style="background:#D1FAE5;color:#059669"><i class="bi bi-bag-check" style="font-size:1.3rem"></i></div><div class="stat-card-value"><%=stats.totalCommandes%></div><div class="stat-card-label">Total commandes</div></div>
+      <div class="stat-card stat-brand"><div class="stat-card-icon" style="background:#FEF3C7;color:#D97706"><i class="bi bi-star" style="font-size:1.3rem"></i></div><div class="stat-card-value"><%=stats.noteMoyenne%>/5</div><div class="stat-card-label">Note moyenne (<%=stats.nbAvis%> avis)</div></div>
+      <div class="stat-card stat-blue"><div class="stat-card-icon" style="background:#DBEAFE;color:#2563EB"><i class="bi bi-egg-fried" style="font-size:1.3rem"></i></div><div class="stat-card-value"><%=stats.nbPlats%></div><div class="stat-card-label">Plats au menu</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr;gap:1.5rem;margin-bottom:1.5rem">
+      <div class="chart-card"><div class="chart-header"><div class="card-title"><i class="bi bi-graph-up"></i> Chiffre d'affaires</div></div><div class="chart-body"><div class="chart-wrap"><canvas id="caChart"></canvas></div></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+      <div class="chart-card">
+        <div class="chart-header"><div class="card-title"><i class="bi bi-trophy"></i> Top plats commandés</div></div>
+        <div class="chart-body">
+          <% if(topPlats.length===0){%><div class="empty-state" style="padding:1.5rem"><div class="empty-state-icon"><i class="bi bi-egg-fried"></i></div><p>Pas encore de données</p></div>
+          <% } else { %>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <%topPlats.forEach((p,i)=>{const pct=Math.round(p.count/topPlats[0].count*100);%>
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+                    <span><strong style="color:var(--brand)">#<%=i+1%></strong> <%=p.nom%></span>
+                    <span style="color:var(--brand);font-weight:700"><%=p.count%>×</span>
+                  </div>
+                  <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:<%=pct%>%;background:linear-gradient(90deg,#F59E0B,#FCD34D);border-radius:3px;transition:width .8s ease"></div></div>
+                </div>
+              <%});%>
+            </div>
+          <%}%>
+        </div>
+      </div>
+      <div class="chart-card"><div class="chart-header"><div class="card-title"><i class="bi bi-clock-history"></i> Heures de pointe</div></div><div class="chart-body"><div class="chart-wrap"><canvas id="heuresChart"></canvas></div></div></div>
+    </div>
+  </div>
+</div>
+<script>
+const ca7j   = <%- JSON.stringify(ca7j) %>;
+const heures = <%- JSON.stringify(heures) %>;
+const caCtx  = document.getElementById('caChart').getContext('2d');
+let caChart  = new Chart(caCtx, { type:'bar', data:{ labels:ca7j.map(d=>d.label), datasets:[{ label:'CA (FCFA)', data:ca7j.map(d=>d.ca), backgroundColor:'rgba(245,158,11,0.75)', borderColor:'#D97706', borderWidth:2, borderRadius:6, borderSkipped:false }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:true, ticks:{callback:v=>v.toLocaleString('fr-FR')+'F'}, grid:{color:'rgba(0,0,0,0.04)'} }, x:{grid:{display:false}} } } });
+new Chart(document.getElementById('heuresChart').getContext('2d'), { type:'line', data:{ labels:Array.from({length:24},(_,i)=>i+'h'), datasets:[{ label:'Commandes', data:heures, fill:true, backgroundColor:'rgba(59,130,246,0.08)', borderColor:'rgba(59,130,246,0.8)', borderWidth:2, tension:.4, pointBackgroundColor:'rgba(59,130,246,1)', pointRadius:3 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}} } });
+async function changePeriode(j) {
+  document.getElementById('btn7').className='btn btn-sm '+(j===7?'btn-primary':'btn-secondary');
+  document.getElementById('btn30').className='btn btn-sm '+(j===30?'btn-primary':'btn-secondary');
+  const data = await fetch(`/analytics/api/ca?periode=${j}`).then(r=>r.json());
+  caChart.data.labels=data.map(d=>d.label); caChart.data.datasets[0].data=data.map(d=>d.ca); caChart.update();
+}
+</script>
+<script src="/js/app.js"></script>
+</body></html>
