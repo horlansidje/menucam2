@@ -1,0 +1,182 @@
+<%- include('../partials/head', {title:'Horaires'}) %>
+<%- include('../partials/sidebar', {activePage:'horaires', enAttenteCount:0}) %>
+<div class="main-content">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button>
+      <div class="topbar-title">Horaires d'ouverture</div>
+    </div>
+  </div>
+  <div class="page-body">
+    <% if(error&&error.length>0){%><div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i><%=error%></div><%}%>
+    <% if(success&&success.length>0){%><div class="alert alert-success"><i class="bi bi-check-circle"></i><%=success%></div><%}%>
+
+    <div class="page-header">
+      <div>
+        <div class="page-title">Horaires d'ouverture</div>
+        <div class="page-subtitle">Définissez vos horaires — affichés automatiquement sur votre menu client</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:1.5rem;align-items:start">
+      <!-- Horaires par jour -->
+      <div class="card">
+        <div class="card-header-bar"><div class="card-title">🕐 Horaires par jour</div></div>
+        <div class="card-body">
+          <form method="POST" action="/horaires/sauvegarder">
+            <div class="horaires-grid">
+              <% JOURS.forEach(jour => {
+                const h = horaires[jour] || { ferme:false, ouverture:'08:00', fermeture:'22:00' };
+              %>
+              <div class="horaire-row" id="row-<%= jour %>">
+                <div class="jour-label"><%= JOURS_LABELS[jour] %></div>
+                <div class="jour-ferme-toggle">
+                  <label class="toggle-switch">
+                    <input type="checkbox" name="<%= jour %>_ferme" id="ferme-<%= jour %>" <%= h.ferme ? 'checked' : '' %> onchange="toggleFerme('<%= jour %>')"/>
+                    <span class="toggle-knob"></span>
+                  </label>
+                  <span class="toggle-label">Fermé</span>
+                </div>
+                <div class="jour-heures" id="heures-<%= jour %>" style="<%= h.ferme ? 'opacity:.3;pointer-events:none' : '' %>">
+                  <div class="heure-field">
+                    <label style="font-size:11px;color:var(--text-tertiary);font-weight:600;text-transform:uppercase">Ouverture</label>
+                    <input type="time" name="<%= jour %>_ouverture" value="<%= h.ouverture || '08:00' %>" class="form-control" style="width:120px"/>
+                  </div>
+                  <div style="color:var(--text-tertiary);font-size:1.1rem;padding-top:18px">→</div>
+                  <div class="heure-field">
+                    <label style="font-size:11px;color:var(--text-tertiary);font-weight:600;text-transform:uppercase">Fermeture</label>
+                    <input type="time" name="<%= jour %>_fermeture" value="<%= h.fermeture || '22:00' %>" class="form-control" style="width:120px"/>
+                  </div>
+                </div>
+              </div>
+              <% }); %>
+            </div>
+            <div style="margin-top:1.5rem;display:flex;gap:10px">
+              <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Enregistrer les horaires</button>
+              <button type="button" class="btn btn-secondary" onclick="appliquerTous()"><i class="bi bi-copy"></i> Appliquer Lun-Sam</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Statut manuel + aperçu -->
+      <div style="display:flex;flex-direction:column;gap:1rem">
+        <!-- Statut manuel -->
+        <div class="card">
+          <div class="card-header-bar"><div class="card-title">⚡ Statut rapide</div></div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:1rem">Forcez un statut indépendamment des horaires</p>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <% [['auto','🔄 Automatique (selon horaires)','secondary'],['ouvert','✅ Forcer Ouvert','success'],['ferme','🔴 Forcer Fermé','danger'],['indisponible','⏸️ Temporairement indisponible','warning']].forEach(([val,label,type]) => { %>
+              <label class="statut-option <%= statut_manuel===val?'selected':'' %>" onclick="setStatut('<%= val %>')">
+                <input type="radio" name="statut_manuel" value="<%= val %>" <%= statut_manuel===val?'checked':'' %> style="display:none"/>
+                <span><%= label %></span>
+                <% if(statut_manuel===val) { %><i class="bi bi-check-circle-fill" style="color:var(--accent);margin-left:auto"></i><% } %>
+              </label>
+              <% }); %>
+            </div>
+          </div>
+        </div>
+
+        <!-- Aperçu client -->
+        <div class="card" style="border:2px solid var(--brand)">
+          <div class="card-header-bar"><div class="card-title">👁️ Aperçu client</div></div>
+          <div class="card-body" style="text-align:center">
+            <div id="statutPreview" style="font-size:1.1rem;font-weight:700;padding:12px;border-radius:10px;background:var(--surface-2)">
+              Chargement…
+            </div>
+            <p style="font-size:12px;color:var(--text-tertiary);margin-top:8px">Visible sur votre menu public</p>
+          </div>
+        </div>
+
+        <!-- Lien public -->
+        <div class="card">
+          <div class="card-body" style="text-align:center">
+            <i class="bi bi-link-45deg" style="font-size:2rem;color:var(--brand)"></i>
+            <p style="font-size:13px;font-weight:600;margin:8px 0 4px">Votre page publique</p>
+            <p style="font-size:12px;color:var(--text-tertiary)">Les clients voient votre statut en temps réel</p>
+            <a href="/dashboard" class="btn btn-sm btn-secondary" style="margin-top:8px">Voir QR Code</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.horaires-grid { display:flex;flex-direction:column;gap:0 }
+.horaire-row { display:flex;align-items:center;gap:1.5rem;padding:12px 0;border-bottom:1px solid var(--border) }
+.horaire-row:last-child { border-bottom:none }
+.jour-label { width:90px;font-weight:700;color:var(--text-primary);font-size:14px;flex-shrink:0 }
+.jour-ferme-toggle { display:flex;align-items:center;gap:8px;flex-shrink:0;width:90px }
+.toggle-label { font-size:13px;color:var(--text-secondary) }
+.jour-heures { display:flex;align-items:flex-end;gap:10px;transition:opacity .2s }
+.heure-field { display:flex;flex-direction:column;gap:4px }
+.toggle-switch { position:relative;display:inline-block;width:36px;height:20px;cursor:pointer }
+.toggle-switch input { opacity:0;width:0;height:0 }
+.toggle-knob { position:absolute;inset:0;background:var(--gray-300);border-radius:999px;transition:.2s }
+.toggle-knob::before { content:'';position:absolute;left:3px;top:3px;width:14px;height:14px;background:#fff;border-radius:50%;transition:.2s }
+.toggle-switch input:checked + .toggle-knob { background:var(--danger) }
+.toggle-switch input:checked + .toggle-knob::before { transform:translateX(16px) }
+.statut-option { display:flex;align-items:center;gap:10px;padding:10px 14px;border:2px solid var(--border);border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s }
+.statut-option:hover { border-color:var(--brand);background:var(--brand-pale) }
+.statut-option.selected { border-color:var(--brand);background:var(--brand-pale) }
+@media(max-width:768px){
+  div[style*="grid-template-columns:1fr 340px"]{grid-template-columns:1fr!important}
+  .horaire-row{flex-wrap:wrap;gap:8px}
+  .jour-heures{flex-wrap:wrap}
+}
+</style>
+
+<script src="/js/app.js"></script>
+<script>
+function toggleFerme(jour) {
+  const cb = document.getElementById(`ferme-${jour}`);
+  const heures = document.getElementById(`heures-${jour}`);
+  heures.style.opacity = cb.checked ? '.3' : '1';
+  heures.style.pointerEvents = cb.checked ? 'none' : '';
+}
+
+function appliquerTous() {
+  const lunOuv  = document.querySelector('[name="lundi_ouverture"]')?.value || '08:00';
+  const lunFerm = document.querySelector('[name="lundi_fermeture"]')?.value || '22:00';
+  ['mardi','mercredi','jeudi','vendredi','samedi'].forEach(j => {
+    const o = document.querySelector(`[name="${j}_ouverture"]`);
+    const f = document.querySelector(`[name="${j}_fermeture"]`);
+    if(o) o.value = lunOuv;
+    if(f) f.value = lunFerm;
+    const cb = document.getElementById(`ferme-${j}`);
+    if(cb) { cb.checked=false; toggleFerme(j); }
+  });
+  showToast('Horaires de lundi appliqués à Mardi–Samedi', 'success');
+}
+
+document.querySelectorAll('.statut-option').forEach(opt => {
+  opt.addEventListener('click', () => {
+    document.querySelectorAll('.statut-option').forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+  });
+});
+
+async function setStatut(val) {
+  const res  = await fetch('/horaires/statut', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({statut_manuel:val}) });
+  const data = await res.json();
+  if(data.ok) { loadPreview(); showToast('Statut mis à jour !','success'); }
+}
+
+async function loadPreview() {
+  const rid = '<%= typeof restaurantId !== "undefined" ? restaurantId : "" %>';
+  if(!rid) return;
+  const res = await fetch(`/horaires/api/statut/${rid}`);
+  const data = await res.json();
+  if(data.message) {
+    const el = document.getElementById('statutPreview');
+    el.textContent = data.message;
+    el.style.background = data.ouvert ? '#D1FAE5' : '#FEE2E2';
+    el.style.color = data.ouvert ? '#059669' : '#B91C1C';
+  }
+}
+loadPreview();
+setInterval(loadPreview, 30000);
+</script>
+</body></html>
