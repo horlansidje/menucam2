@@ -1,0 +1,218 @@
+<%- include('../partials/head', {title:'Catégories'}) %>
+<%- include('../partials/sidebar', {activePage:'categories', enAttenteCount: 0}) %>
+<div class="main-content">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button>
+      <div class="topbar-title">Catégories de plats</div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-primary btn-sm" onclick="openModal('modalNouvelle')">
+        <i class="bi bi-plus-lg"></i> Nouvelle catégorie
+      </button>
+    </div>
+  </div>
+  <div class="page-body">
+    <% if(error&&error.length>0){%><div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i><%=error%></div><%}%>
+    <% if(success&&success.length>0){%><div class="alert alert-success"><i class="bi bi-check-circle"></i><%=success%></div><%}%>
+
+    <div class="page-header">
+      <div>
+        <div class="page-title">Gestion des catégories</div>
+        <div class="page-subtitle">Organisez votre menu par catégories personnalisées — <%= cats.length %> catégorie(s)</div>
+      </div>
+      <a href="/plats" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left"></i> Retour aux plats</a>
+    </div>
+
+    <% if(cats.length === 0) { %>
+      <div class="empty-state">
+        <div class="empty-state-icon"><i class="bi bi-tags"></i></div>
+        <h3>Aucune catégorie</h3>
+        <p>Créez des catégories pour organiser votre menu : Entrées, Grillades, Boissons, Desserts…</p>
+        <button class="btn btn-primary" onclick="openModal('modalNouvelle')"><i class="bi bi-plus-lg"></i> Créer ma première catégorie</button>
+      </div>
+    <% } else { %>
+      <div class="card">
+        <div class="card-header-bar">
+          <div class="card-title">📂 Vos catégories</div>
+          <span style="font-size:12px;color:var(--text-tertiary)">Glissez pour réordonner</span>
+        </div>
+        <div class="card-body" style="padding:0">
+          <ul id="catList" style="list-style:none;padding:0;margin:0">
+            <% cats.forEach(cat => { %>
+            <li class="cat-item <%= cat.actif ? '' : 'cat-inactive' %>" data-id="<%= cat._id %>">
+              <div class="cat-drag-handle"><i class="bi bi-grip-vertical"></i></div>
+              <div class="cat-emoji"><%= cat.icone ? `<img src="${cat.icone}" style="width:32px;height:32px;object-fit:cover;border-radius:6px">` : cat.emoji || '🍽️' %></div>
+              <div class="cat-info">
+                <div class="cat-name"><%= cat.nom %></div>
+                <% if(cat.description) { %><div class="cat-desc"><%= cat.description %></div><% } %>
+              </div>
+              <div class="cat-status">
+                <span class="badge <%= cat.actif ? 'badge-success' : 'badge-gray' %>"><%= cat.actif ? 'Active' : 'Inactive' %></span>
+              </div>
+              <div class="cat-actions">
+                <button class="btn btn-ghost btn-sm btn-icon" onclick="toggleCat('<%= cat._id %>',this)" title="<%= cat.actif ? 'Désactiver' : 'Activer' %>">
+                  <i class="bi <%= cat.actif ? 'bi-eye' : 'bi-eye-slash' %>"></i>
+                </button>
+                <button class="btn btn-ghost btn-sm btn-icon" onclick="openModifier('<%= cat._id %>','<%= cat.nom.replace(/'/g,"\\\'") %>','<%= (cat.description||'').replace(/'/g,"\\\'") %>','<%= cat.emoji||'🍽️' %>')" title="Modifier">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <form method="POST" action="/categories/<%= cat._id %>/supprimer" style="display:inline" onsubmit="return confirm('Supprimer la catégorie \'<%= cat.nom %>\' ?')">
+                  <button type="submit" class="btn btn-ghost btn-sm btn-icon" title="Supprimer"><i class="bi bi-trash3"></i></button>
+                </form>
+              </div>
+            </li>
+            <% }); %>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Conseil -->
+      <div class="card" style="border-left:3px solid var(--brand);background:var(--brand-pale)">
+        <div class="card-body" style="padding:1rem">
+          <p style="font-size:13px;color:var(--gray-700);margin:0"><i class="bi bi-lightbulb" style="color:var(--brand)"></i> <strong>Astuce :</strong> Les catégories inactives ne sont pas visibles sur votre menu client. Utilisez-les pour masquer temporairement une section (ex: menu du soir).</p>
+        </div>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<!-- Modal Nouvelle catégorie -->
+<div class="modal-backdrop" id="modalNouvelle" style="display:none">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title"><i class="bi bi-tag"></i> Nouvelle catégorie</div>
+      <button class="modal-close" onclick="closeModal('modalNouvelle')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <form method="POST" action="/categories/nouvelle" enctype="multipart/form-data">
+      <div class="modal-body">
+        <div class="form-field">
+          <label class="form-label">Emoji <span style="color:var(--text-tertiary)">(icône rapide)</span></label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px" id="emojiPicker">
+            <% ['🍽️','🥩','🍗','🥗','🍜','🍕','🥪','🌮','🍱','🥘','🍣','🦞','🥩','🍖','🫕','🥚','🫔','🥙','🧆','🥞','🧇','🍿','🥐','🍰','🧁','🍦','🎂','☕','🥤','🍺','🍹','🧃','💧'].forEach(e => { %>
+              <button type="button" class="emoji-btn" data-emoji="<%= e %>" onclick="selectEmoji('<%= e %>')" style="font-size:1.4rem;padding:6px 8px;border:2px solid var(--border);border-radius:8px;background:var(--surface-2);cursor:pointer;transition:all .15s"><%= e %></button>
+            <% }) %>
+          </div>
+          <input type="hidden" name="emoji" id="selectedEmoji" value="🍽️"/>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Nom de la catégorie *</label>
+          <div class="input-group"><i class="bi bi-tag"></i><input type="text" name="nom" class="form-control" placeholder="Ex: Grillades, Boissons, Desserts…" required/></div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Description <span style="color:var(--text-tertiary)">(facultatif)</span></label>
+          <textarea name="description" class="form-control" rows="2" placeholder="Ex: Nos viandes grillées au feu de bois…" style="resize:vertical"></textarea>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Image / Icône <span style="color:var(--text-tertiary)">(optionnel)</span></label>
+          <input type="file" name="icone" class="form-control" accept="image/*"/>
+          <p style="font-size:12px;color:var(--text-tertiary);margin-top:4px">Si une image est fournie, elle remplace l'emoji.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalNouvelle')">Annuler</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Créer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Modifier -->
+<div class="modal-backdrop" id="modalModifier" style="display:none">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title"><i class="bi bi-pencil"></i> Modifier la catégorie</div>
+      <button class="modal-close" onclick="closeModal('modalModifier')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <form method="POST" id="formModifier" action="" enctype="multipart/form-data">
+      <div class="modal-body">
+        <div class="form-field">
+          <label class="form-label">Emoji</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px" id="emojiPickerEdit">
+            <% ['🍽️','🥩','🍗','🥗','🍜','🍕','🥪','🌮','🍱','🥘','🍣','🦞','🥩','🍖','🫕','🥚','🫔','🥙','🧆','🥞','🧇','🍿','🥐','🍰','🧁','🍦','🎂','☕','🥤','🍺','🍹','🧃','💧'].forEach(e => { %>
+              <button type="button" class="emoji-btn-edit" data-emoji="<%= e %>" onclick="selectEmojiEdit('<%= e %>')" style="font-size:1.4rem;padding:6px 8px;border:2px solid var(--border);border-radius:8px;background:var(--surface-2);cursor:pointer;transition:all .15s"><%= e %></button>
+            <% }) %>
+          </div>
+          <input type="hidden" name="emoji" id="selectedEmojiEdit" value="🍽️"/>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Nom *</label>
+          <div class="input-group"><i class="bi bi-tag"></i><input type="text" name="nom" id="editNom" class="form-control" required/></div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Description</label>
+          <textarea name="description" id="editDesc" class="form-control" rows="2" style="resize:vertical"></textarea>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Nouvelle image (remplace l'actuelle)</label>
+          <input type="file" name="icone" class="form-control" accept="image/*"/>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalModifier')">Annuler</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.cat-item { display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);transition:background var(--t);cursor:grab }
+.cat-item:last-child { border-bottom:none }
+.cat-item:hover { background:var(--surface-2) }
+.cat-item.cat-inactive { opacity:.55 }
+.cat-drag-handle { color:var(--gray-400);cursor:grab;font-size:1.1rem;flex-shrink:0 }
+.cat-emoji { font-size:1.6rem;flex-shrink:0;width:40px;text-align:center }
+.cat-info { flex:1 }
+.cat-name { font-weight:700;font-size:15px;color:var(--text-primary) }
+.cat-desc { font-size:12px;color:var(--text-tertiary);margin-top:2px }
+.cat-status { flex-shrink:0 }
+.cat-actions { display:flex;gap:4px;flex-shrink:0 }
+.emoji-btn.selected, .emoji-btn-edit.selected { border-color:var(--brand)!important;background:var(--brand-light)!important }
+</style>
+
+<script src="/js/app.js"></script>
+<script>
+function openModal(id){ document.getElementById(id).style.display='flex'; }
+function closeModal(id){ document.getElementById(id).style.display='none'; }
+document.querySelectorAll('.modal-backdrop').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.style.display='none'; }));
+
+function selectEmoji(e) {
+  document.getElementById('selectedEmoji').value = e;
+  document.querySelectorAll('.emoji-btn').forEach(b => b.classList.toggle('selected', b.dataset.emoji === e));
+}
+function selectEmojiEdit(e) {
+  document.getElementById('selectedEmojiEdit').value = e;
+  document.querySelectorAll('.emoji-btn-edit').forEach(b => b.classList.toggle('selected', b.dataset.emoji === e));
+}
+
+function openModifier(id, nom, desc, emoji) {
+  document.getElementById('formModifier').action = `/categories/${id}/modifier`;
+  document.getElementById('editNom').value = nom;
+  document.getElementById('editDesc').value = desc;
+  document.getElementById('selectedEmojiEdit').value = emoji;
+  document.querySelectorAll('.emoji-btn-edit').forEach(b => b.classList.toggle('selected', b.dataset.emoji === emoji));
+  openModal('modalModifier');
+}
+
+async function toggleCat(id, btn) {
+  const res = await fetch(`/categories/${id}/toggle`, { method:'POST', headers:{'Content-Type':'application/json'} });
+  const data = await res.json();
+  if (data.ok) location.reload();
+}
+
+// Drag & drop réordonnage (simple)
+let dragEl = null;
+document.querySelectorAll('.cat-item').forEach(li => {
+  li.setAttribute('draggable','true');
+  li.addEventListener('dragstart', e => { dragEl=li; li.style.opacity='0.4'; });
+  li.addEventListener('dragend',   e => { li.style.opacity=''; dragEl=null; saveOrder(); });
+  li.addEventListener('dragover',  e => { e.preventDefault(); if(dragEl&&dragEl!==li) { const list=li.parentNode; const items=[...list.children]; const from=items.indexOf(dragEl); const to=items.indexOf(li); from<to ? list.insertBefore(dragEl,li.nextSibling) : list.insertBefore(dragEl,li); } });
+});
+
+async function saveOrder() {
+  const ordre = [...document.querySelectorAll('.cat-item')].map(li=>li.dataset.id);
+  await fetch('/categories/reorder', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ordre}) });
+}
+</script>
+</body></html>
