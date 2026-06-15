@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Paiement · <%= commande.num_commande %></title>
+  <meta name="theme-color" content="#111827"/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+  <% if(stripe_pk) { %><script src="https://js.stripe.com/v3/"></script><% } %>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Bricolage+Grotesque:wght@700;800&display=swap');
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Plus Jakarta Sans',sans-serif;background:#0f172a;color:#fff;min-height:100vh;padding-bottom:3rem}
+    a{color:inherit;text-decoration:none}
+
+    /* Header */
+    .pay-header{background:linear-gradient(180deg,#111827,#1e293b);padding:1.5rem;text-align:center;position:relative}
+    .back-btn{position:absolute;left:1.25rem;top:50%;transform:translateY(-50%);color:rgba(255,255,255,.5);font-size:13px;display:flex;align-items:center;gap:6px}
+    .back-btn:hover{color:#fff}
+    .pay-header h1{font-family:'Bricolage Grotesque',sans-serif;font-size:1.4rem;font-weight:800;color:#F59E0B;margin-bottom:2px}
+    .pay-header p{font-size:13px;color:rgba(255,255,255,.4)}
+
+    /* Body */
+    .pay-body{max-width:480px;margin:0 auto;padding:1.5rem 1rem}
+    .card{background:#1e293b;border:1px solid rgba(255,255,255,.08);border-radius:18px;margin-bottom:1rem;overflow:hidden}
+    .card-head{padding:.9rem 1.25rem;border-bottom:1px solid rgba(255,255,255,.06);font-weight:700;font-size:13px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:8px}
+    .card-head i{color:#F59E0B}
+    .card-body{padding:1.25rem}
+
+    /* Montant */
+    .amount-display{text-align:center;padding:1.25rem}
+    .amount-label{font-size:13px;color:rgba(255,255,255,.4);margin-bottom:4px}
+    .amount-value{font-family:'Bricolage Grotesque',sans-serif;font-size:2.2rem;font-weight:800;color:#F59E0B}
+    .amount-sub{font-size:12px;color:rgba(255,255,255,.3);margin-top:4px}
+
+    /* Méthodes */
+    .methods-grid{display:flex;flex-direction:column;gap:10px}
+    .method-btn{display:flex;align-items:center;gap:14px;padding:14px 16px;border:2px solid rgba(255,255,255,.1);border-radius:14px;cursor:pointer;transition:all .2s;background:rgba(255,255,255,.03);width:100%;text-align:left;font-family:inherit}
+    .method-btn:hover{border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.06)}
+    .method-btn.selected{border-color:#F59E0B;background:rgba(245,158,11,.08)}
+    .method-logo{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+    .method-info{flex:1}
+    .method-name{font-weight:700;font-size:14px;color:#fff}
+    .method-desc{font-size:12px;color:rgba(255,255,255,.4);margin-top:2px}
+    .method-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;flex-shrink:0}
+    .badge-green{background:rgba(16,185,129,.15);color:#34D399}
+    .badge-blue{background:rgba(59,130,246,.15);color:#60A5FA}
+    .badge-orange{background:rgba(245,158,11,.15);color:#F59E0B}
+
+    /* Séparateur */
+    .separator{display:flex;align-items:center;gap:10px;margin:1rem 0;color:rgba(255,255,255,.2);font-size:12px}
+    .separator::before,.separator::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08)}
+
+    /* Bouton payer */
+    .btn-payer{width:100%;padding:15px;background:#F59E0B;color:#111;border:none;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;font-family:inherit;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:1rem}
+    .btn-payer:hover{background:#D97706;transform:translateY(-1px)}
+    .btn-payer:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+    /* Sécurité */
+    .secure-badges{display:flex;align-items:center;justify-content:center;gap:12px;padding:.75rem;flex-wrap:wrap}
+    .sec-badge{display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,.35);font-weight:500}
+
+    /* Récap commande */
+    .recap-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px}
+    .recap-item:last-child{border:none}
+    .recap-total{display:flex;justify-content:space-between;font-weight:800;font-size:15px;padding:10px 0 0;border-top:1px solid rgba(255,255,255,.1);margin-top:4px}
+    .recap-total span:last-child{color:#F59E0B}
+
+    /* Toast */
+    .toast-bar{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(100px);background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px 20px;font-size:14px;font-weight:600;color:#fff;z-index:9999;transition:transform .35s cubic-bezier(.34,1.56,.64,1);box-shadow:0 10px 40px rgba(0,0,0,.5);white-space:nowrap;max-width:90vw;text-align:center}
+    .toast-bar.show{transform:translateX(-50%) translateY(0)}
+    .toast-bar.success{border-color:rgba(16,185,129,.3);color:#34D399}
+    .toast-bar.error{border-color:rgba(239,68,68,.3);color:#F87171}
+
+    /* Overlay chargement */
+    .loading-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;display:none;align-items:center;justify-content:center;flex-direction:column;gap:1rem;backdrop-filter:blur(4px)}
+    .loading-overlay.show{display:flex}
+    .spinner{width:50px;height:50px;border:3px solid rgba(255,255,255,.1);border-top-color:#F59E0B;border-radius:50%;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-overlay p{font-size:14px;color:rgba(255,255,255,.7);font-weight:600}
+
+    /* USP */
+    .phone-input-wrap{margin-top:12px;display:none}
+    .phone-input-wrap input{width:100%;padding:12px 14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;font-family:inherit}
+    .phone-input-wrap input::placeholder{color:rgba(255,255,255,.3)}
+    .phone-input-wrap input:focus{outline:none;border-color:#F59E0B}
+    .phone-input-wrap label{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:6px;display:block}
+
+    @media(max-width:480px){.amount-value{font-size:1.8rem}}
+  </style>
+</head>
+<body>
+
+<div class="pay-header">
+  <a href="/commandes/suivi/<%= commande.num_commande %>" class="back-btn"><i class="bi bi-arrow-left"></i> Retour</a>
+  <h1>💳 Paiement</h1>
+  <p><%= restaurant.nom %> · Commande <%= commande.num_commande %></p>
+</div>
+
+<div class="pay-body">
+
+  <!-- Montant -->
+  <div class="card">
+    <div class="amount-display">
+      <div class="amount-label">Montant à payer</div>
+      <div class="amount-value"><%= commande.total.toLocaleString('fr-FR') %> FCFA</div>
+      <div class="amount-sub"><%= commande.items.length %> article(s) · <%= commande.type_livraison === 'livraison' ? 'Livraison' : commande.type_livraison === 'a_emporter' ? 'À emporter' : 'Sur place' %></div>
+    </div>
+  </div>
+
+  <!-- Méthodes de paiement -->
+  <div class="card">
+    <div class="card-head"><i class="bi bi-credit-card-2-front"></i> Choisissez votre mode de paiement</div>
+    <div class="card-body">
+      <div class="methods-grid">
+
+        <!-- CinetPay — couvre MTN + Orange + Wave + Moov -->
+        <button class="method-btn" data-method="cinetpay" onclick="selectionner(this)">
+          <div class="method-logo" style="background:linear-gradient(135deg,#FFD700,#FFA500)">🌍</div>
+          <div class="method-info">
+            <div class="method-name">Mobile Money — Tous opérateurs</div>
+            <div class="method-desc">MTN, Orange, Wave, Moov, Airtel… via CinetPay</div>
+          </div>
+          <span class="method-badge badge-green">Recommandé</span>
+        </button>
+
+        <!-- MTN MoMo direct -->
+        <button class="method-btn" data-method="mtn" onclick="selectionner(this)">
+          <div class="method-logo" style="background:#FFD200">📱</div>
+          <div class="method-info">
+            <div class="method-name">MTN Mobile Money</div>
+            <div class="method-desc">Paiement direct sur votre numéro MTN</div>
+          </div>
+          <span class="method-badge badge-orange">MTN</span>
+        </button>
+        <div class="phone-input-wrap" id="phoneMtn">
+          <label>Votre numéro MTN Mobile Money</label>
+          <input type="tel" id="mtnPhone" placeholder="Ex: 677000000" value="<%= commande.client_telephone || '' %>"/>
+        </div>
+
+        <!-- Orange Money direct -->
+        <button class="method-btn" data-method="orange" onclick="selectionner(this)">
+          <div class="method-logo" style="background:#FF6600">🟠</div>
+          <div class="method-info">
+            <div class="method-name">Orange Money</div>
+            <div class="method-desc">Paiement direct sur votre numéro Orange</div>
+          </div>
+          <span class="method-badge" style="background:rgba(255,102,0,.15);color:#FF6600">Orange</span>
+        </button>
+        <div class="phone-input-wrap" id="phoneOrange">
+          <label>Votre numéro Orange Money</label>
+          <input type="tel" id="orangePhone" placeholder="Ex: 695000000" value="<%= commande.client_telephone || '' %>"/>
+        </div>
+
+        <% if(stripe_pk) { %>
+        <!-- Stripe — carte bancaire -->
+        <button class="method-btn" data-method="stripe" onclick="selectionner(this)">
+          <div class="method-logo" style="background:linear-gradient(135deg,#635BFF,#4F46E5)">💳</div>
+          <div class="method-info">
+            <div class="method-name">Carte bancaire (Visa / Mastercard)</div>
+            <div class="method-desc">Paiement sécurisé par Stripe</div>
+          </div>
+          <span class="method-badge badge-blue">International</span>
+        </button>
+        <% } %>
+
+        <div class="separator">ou</div>
+
+        <!-- WhatsApp -->
+        <button class="method-btn" data-method="whatsapp" onclick="selectionner(this)">
+          <div class="method-logo" style="background:#25D366">💬</div>
+          <div class="method-info">
+            <div class="method-name">Payer via WhatsApp</div>
+            <div class="method-desc">Envoyez la commande au restaurant et payez à la livraison</div>
+          </div>
+          <span class="method-badge" style="background:rgba(37,211,102,.15);color:#25D366">Manuel</span>
+        </button>
+
+      </div>
+
+      <button class="btn-payer" id="btnPayer" onclick="payer()" disabled>
+        <i class="bi bi-lock-fill"></i> <span id="btnPayerLabel">Sélectionnez un mode de paiement</span>
+      </button>
+
+      <!-- Sécurité -->
+      <div class="secure-badges">
+        <span class="sec-badge"><i class="bi bi-shield-lock-fill" style="color:#10B981"></i> Paiement sécurisé</span>
+        <span class="sec-badge"><i class="bi bi-eye-slash-fill"></i> Données chiffrées</span>
+        <span class="sec-badge"><i class="bi bi-patch-check-fill" style="color:#60A5FA"></i> SSL/TLS</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Récap commande -->
+  <div class="card">
+    <div class="card-head"><i class="bi bi-receipt"></i> Récapitulatif</div>
+    <div class="card-body">
+      <% commande.items.forEach(item => { %>
+        <div class="recap-item">
+          <span style="color:rgba(255,255,255,.7)"><%= item.quantite %>× <%= item.nom %></span>
+          <span style="font-weight:600"><%= (item.prix * item.quantite).toLocaleString('fr-FR') %> F</span>
+        </div>
+      <% }); %>
+      <% if(commande.reduction > 0) { %>
+        <div class="recap-item"><span style="color:#34D399">🎁 Promo <%= commande.promo_code %></span><span style="color:#34D399">-<%= commande.reduction.toLocaleString('fr-FR') %> F</span></div>
+      <% } %>
+      <div class="recap-total"><span>Total</span><span><%= commande.total.toLocaleString('fr-FR') %> FCFA</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <p id="loadingMsg">Traitement en cours…</p>
+</div>
+
+<div class="toast-bar" id="toastBar"></div>
+
+<script>
+const NUM_COMMANDE = '<%= commande.num_commande %>';
+const STRIPE_PK    = '<%= stripe_pk || "" %>';
+const RESTAURANT_TEL = '<%= (restaurant.telephone || "").replace(/\s/g,"") %>';
+let selectedMethod = null;
+let pollingInterval = null;
+
+function showToast(msg, type='', dur=5000) {
+  const t = document.getElementById('toastBar');
+  t.textContent = msg; t.className = `toast-bar ${type} show`;
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+function showLoading(msg='Traitement en cours…') {
+  document.getElementById('loadingMsg').textContent = msg;
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
+
+function selectionner(btn) {
+  document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedMethod = btn.dataset.method;
+
+  // Afficher/masquer champs téléphone
+  document.getElementById('phoneMtn').style.display    = selectedMethod === 'mtn'    ? 'block' : 'none';
+  document.getElementById('phoneOrange').style.display = selectedMethod === 'orange' ? 'block' : 'none';
+
+  const labels = {
+    cinetpay: '💰 Payer avec Mobile Money',
+    mtn:      '📱 Payer avec MTN MoMo',
+    orange:   '🟠 Payer avec Orange Money',
+    stripe:   '💳 Payer par carte bancaire',
+    whatsapp: '💬 Commander via WhatsApp',
+  };
+  document.getElementById('btnPayer').disabled = false;
+  document.getElementById('btnPayerLabel').textContent = labels[selectedMethod] || 'Payer';
+}
+
+async function payer() {
+  if (!selectedMethod) return;
+  const btn = document.getElementById('btnPayer');
+  btn.disabled = true;
+  showLoading('Initialisation du paiement…');
+
+  try {
+    // Préparer body
+    const body = { num_commande: NUM_COMMANDE, methode: selectedMethod };
+    if (selectedMethod === 'mtn')    body.telephone = document.getElementById('mtnPhone')?.value;
+    if (selectedMethod === 'orange') body.telephone = document.getElementById('orangePhone')?.value;
+
+    const res  = await fetch('/paiement/initier', {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    hideLoading();
+
+    if (!data.ok) { showToast('❌ ' + (data.message || 'Erreur paiement'), 'error'); btn.disabled = false; return; }
+
+    // Traitement selon méthode
+    if (data.payment_url) {
+      // CinetPay, Orange → redirection
+      showLoading('Redirection vers la page de paiement…');
+      window.location.href = data.payment_url;
+    } else if (selectedMethod === 'mtn') {
+      // MTN → demande envoyée, on attend confirmation
+      showToast('📱 Demande envoyée ! Validez sur votre téléphone MTN.', 'success', 8000);
+      btn.disabled = false;
+      demarrerPolling(data.reference_id || NUM_COMMANDE);
+    } else if (selectedMethod === 'stripe') {
+      // Stripe → redirection Checkout
+      showLoading('Redirection vers le paiement sécurisé…');
+      if (data.payment_url) window.location.href = data.payment_url;
+    } else if (selectedMethod === 'whatsapp' && data.lien) {
+      // WhatsApp → ouvrir dans un nouvel onglet
+      window.open(data.lien, '_blank');
+      setTimeout(() => window.location.href = `/commandes/suivi/${NUM_COMMANDE}`, 1500);
+    }
+  } catch(err) {
+    hideLoading();
+    showToast('❌ Erreur réseau', 'error');
+    btn.disabled = false;
+  }
+}
+
+// Polling pour MTN MoMo (vérifie toutes les 5 secondes pendant 3 min)
+function demarrerPolling(ref) {
+  let tentatives = 0;
+  const maxTentatives = 36; // 3 minutes
+  showToast('⏳ Vérification en cours… Validez sur votre téléphone.', '', 10000);
+  pollingInterval = setInterval(async () => {
+    tentatives++;
+    try {
+      const res  = await fetch(`/paiement/verifier/${ref}`);
+      const data = await res.json();
+      if (data.ok && data.statut === 'success') {
+        clearInterval(pollingInterval);
+        showToast('✅ Paiement confirmé ! Redirection…', 'success', 4000);
+        setTimeout(() => window.location.href = `/commandes/suivi/${NUM_COMMANDE}`, 2000);
+      } else if (tentatives >= maxTentatives) {
+        clearInterval(pollingInterval);
+        showToast('⏱️ Délai dépassé. Si vous avez payé, votre commande sera confirmée sous peu.', '', 8000);
+      }
+    } catch(e) {}
+  }, 5000);
+}
+</script>
+</body></html>
