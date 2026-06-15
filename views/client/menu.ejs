@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title><%= restaurant.nom %> — Menu</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+  <link rel="stylesheet" href="/css/menu-public.css"/>
+  <meta name="theme-color" content="#111827"/>
+</head>
+<body>
+
+<!-- Hero Header -->
+<header class="menu-hero">
+  <div class="hero-cover">
+    <div class="hero-cover-gradient"></div>
+    <div class="hero-cover-pattern"></div>
+  </div>
+  <div class="hero-content">
+    <div class="hero-info-row">
+      <div class="restaurant-avatar">
+        <% if(restaurant.logo){ %><img src="<%= restaurant.logo %>" alt="<%= restaurant.nom %>"/>
+        <% } else { %>🍽️<% } %>
+      </div>
+      <div style="flex:1">
+        <h1 class="restaurant-name"><%= restaurant.nom %></h1>
+        <div class="restaurant-meta">
+          <% if(restaurant.adresse || restaurant.ville) { %>
+            <span class="meta-chip"><i class="bi bi-geo-alt"></i> <%= [restaurant.adresse,restaurant.ville].filter(Boolean).join(', ') %></span>
+          <% } %>
+          <% if(restaurant.telephone) { %>
+            <a href="tel:<%= restaurant.telephone %>" class="meta-chip"><i class="bi bi-telephone"></i> <%= restaurant.telephone %></a>
+          <% } %>
+          <% if(restaurant.note_moyenne) { %>
+            <span class="meta-chip rating"><i class="bi bi-star-fill"></i> <%= restaurant.note_moyenne %> (<%= restaurant.nb_avis %> avis)</span>
+          <% } %>
+          <% if(typeof statut_ouverture !== 'undefined' && statut_ouverture) { %>
+            <span class="meta-chip" style="background:<%= statut_ouverture.ouvert ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.12)' %>;color:<%= statut_ouverture.ouvert ? '#059669' : '#B91C1C' %>;border:1px solid <%= statut_ouverture.ouvert ? 'rgba(16,185,129,.3)' : 'rgba(239,68,68,.2)' %>">
+              <%= statut_ouverture.message %>
+            </span>
+          <% } %>
+        </div>
+        <% if(restaurant.description) { %>
+          <p class="restaurant-desc"><%= restaurant.description %></p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Search & Category Bar -->
+<div class="search-bar-wrap">
+  <div class="search-inner">
+    <div class="search-input-wrap">
+      <i class="bi bi-search search-icon"></i>
+      <input type="text" id="searchInput" class="search-input" placeholder="Rechercher un plat..."/>
+    </div>
+    <% const catNames = Object.keys(categories); %>
+    <% if(catNames.length > 0) { %>
+      <div class="cat-scroll">
+        <button class="cat-pill active" data-cat="tous">🍽️ Tous</button>
+        <% catNames.forEach(cat => { %>
+          <button class="cat-pill" data-cat="<%= cat %>"><%= cat %></button>
+        <% }); %>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<!-- Menu Body -->
+<main class="menu-body">
+  <% if(catNames.length === 0) { %>
+    <div class="menu-empty"><i class="bi bi-egg-fried" style="font-size:3rem;color:#9CA3AF;display:block;margin-bottom:1rem"></i><p>Le menu sera disponible bientôt.</p></div>
+  <% } else { %>
+    <% catNames.forEach(cat => { %>
+      <section class="menu-section" id="section-<%= cat.replace(/\s/g,'-') %>" data-cat="<%= cat %>">
+        <div class="section-title">
+          <%= cat %>
+          <span class="section-count"><%= categories[cat].length %> plat<%= categories[cat].length>1?'s':'' %></span>
+        </div>
+        <% categories[cat].forEach(plat => { %>
+          <div class="plat-row" data-name="<%= plat.nom.toLowerCase() %>" data-desc="<%= (plat.description||'').toLowerCase() %>" onclick="addToCart('<%= plat._id %>','<%= plat.nom.replace(/'/g,"\\'") %>',<%= plat.promo_prix||plat.prix %>)">
+            <div class="plat-row-info">
+              <% if(plat.promo_prix) { %><div class="plat-promo-tag"><i class="bi bi-tag-fill"></i> PROMO</div><% } %>
+              <div class="plat-row-name"><%= plat.nom %></div>
+              <% if(plat.description) { %><div class="plat-row-desc"><%= plat.description %></div><% } %>
+              <div class="plat-row-price">
+                <% if(plat.promo_prix) { %><span class="original-price"><%= plat.prix.toLocaleString('fr-FR') %> F</span><% } %>
+                <%= (plat.promo_prix || plat.prix).toLocaleString('fr-FR') %> FCFA
+              </div>
+            </div>
+            <div class="plat-row-img-wrap">
+              <% if(plat.photo) { %>
+                <img src="<%= plat.photo %>" alt="<%= plat.nom %>" class="plat-row-img" loading="lazy"/>
+              <% } else { %>
+                <div class="plat-row-no-img"><i class="bi bi-egg-fried"></i></div>
+              <% } %>
+              <button class="add-btn" id="add-<%= plat._id %>" onclick="event.stopPropagation();addToCart('<%= plat._id %>','<%= plat.nom.replace(/'/g,"\\'") %>',<%= plat.promo_prix||plat.prix %>)">+</button>
+            </div>
+          </div>
+        <% }); %>
+      </section>
+    <% }); %>
+
+    <!-- No results -->
+    <div id="noResults" class="menu-no-results" style="display:none">
+      <i class="bi bi-search" style="font-size:2.5rem;color:#9CA3AF;display:block;margin-bottom:1rem"></i>
+      <p>Aucun plat trouvé pour cette recherche.</p>
+    </div>
+
+    <!-- Avis section -->
+    <% if(avis && avis.length > 0) { %>
+      <div class="avis-section">
+        <div class="avis-section-title"><i class="bi bi-star-fill" style="color:#F59E0B"></i> Avis clients (<%= restaurant.nb_avis || avis.length %>)</div>
+        <% avis.forEach(a => { %>
+          <div class="avis-item">
+            <div class="avis-header">
+              <div>
+                <div class="avis-name"><%= a.client_nom %></div>
+                <div class="avis-stars"><% for(let i=1;i<=5;i++){%><%= i<=a.note?'★':'☆' %><% } %></div>
+              </div>
+              <div class="avis-date"><%= new Date(a.createdAt).toLocaleDateString('fr-FR') %></div>
+            </div>
+            <% if(a.texte) { %><p class="avis-text"><%= a.texte %></p><% } %>
+            <% if(a.reponse) { %><div class="avis-reply"><strong>🍽️ Le restaurant :</strong> <%= a.reponse %></div><% } %>
+          </div>
+        <% }); %>
+      </div>
+    <% } %>
+  <% } %>
+</main>
+
+<!-- Cart Bar -->
+<div class="cart-bar" id="cartBar" style="display:none">
+  <div class="cart-bar-info">
+    <span class="cart-bar-count" id="cartCount">0 article</span>
+    <span class="cart-bar-total" id="cartTotal">0 FCFA</span>
+  </div>
+  <button class="cart-bar-btn" onclick="openCart()"><i class="bi bi-bag"></i> Voir le panier</button>
+</div>
+
+<!-- Drawer Overlay -->
+<div class="drawer-overlay" id="drawerOverlay" style="display:none" onclick="closeCart()"></div>
+
+<!-- Cart Drawer -->
+<div class="cart-drawer" id="cartDrawer" style="display:none;flex-direction:column">
+  <div class="drawer-handle" id="drawerHandle"></div>
+  <div class="drawer-header">
+    <div class="drawer-title">🛒 Mon panier</div>
+    <button class="drawer-close" onclick="closeCart()"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <div class="drawer-body">
+    <div id="cartItemsList"></div>
+
+    <!-- Delivery type -->
+    <div style="margin:1rem 0">
+      <div class="form-label" style="margin-bottom:8px">Type de commande</div>
+      <div class="delivery-tabs">
+        <div class="del-tab active" data-type="sur_place" onclick="selectDelivery(this,'sur_place')">
+          <span class="del-tab-icon">🪑</span>
+          <div class="del-tab-label">Sur place</div>
+        </div>
+        <div class="del-tab" data-type="a_emporter" onclick="selectDelivery(this,'a_emporter')">
+          <span class="del-tab-icon">🛍️</span>
+          <div class="del-tab-label">À emporter</div>
+        </div>
+        <div class="del-tab" data-type="livraison" onclick="selectDelivery(this,'livraison')">
+          <span class="del-tab-icon">🛵</span>
+          <div class="del-tab-label">Livraison</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Client info -->
+    <div style="margin-bottom:1rem">
+      <div style="margin-bottom:.75rem">
+        <label class="form-label">Votre prénom</label>
+        <input type="text" id="clientNom" class="form-input" placeholder="Ex: Jean-Paul"/>
+      </div>
+      <div style="margin-bottom:.75rem">
+        <label class="form-label">Téléphone</label>
+        <input type="tel" id="clientTel" class="form-input" placeholder="6XX XXX XXX"/>
+      </div>
+      <div id="tableRow" style="margin-bottom:.75rem">
+        <label class="form-label">N° de table (optionnel)</label>
+        <input type="text" id="clientTable" class="form-input" placeholder="Ex: 5"/>
+      </div>
+      <div id="adresseRows" style="display:none">
+        <!-- Carte Leaflet GPS livraison -->
+        <div class="client-map-section" style="margin-bottom:.75rem">
+          <div class="client-map-header">
+            <div class="client-map-title">
+              <i class="bi bi-map"></i> Votre position de livraison
+            </div>
+            <button onclick="recentrerPosition()" type="button" style="background:none;border:none;cursor:pointer;color:#F59E0B;font-size:13px;font-weight:600;display:flex;align-items:center;gap:4px">
+              <i class="bi bi-crosshair2"></i> Recentrer
+            </button>
+          </div>
+          <div id="clientMap"></div>
+          <div style="padding:8px 14px 10px">
+            <div id="gpsBadge" class="gps-badge loading">
+              <i class="bi bi-arrow-repeat"></i> En attente...
+            </div>
+          </div>
+        </div>
+        <div style="margin-bottom:.75rem">
+          <label class="form-label">Adresse de livraison</label>
+          <input type="text" id="clientAdresse" class="form-input" placeholder="Détectée automatiquement ou saisissez..."/>
+        </div>
+        <div style="margin-bottom:.75rem">
+          <label class="form-label">Quartier</label>
+          <input type="text" id="clientQuartier" class="form-input" placeholder="Ex: Akwa, Bonamoussadi..."/>
+        </div>
+      </div>
+      <div>
+        <label class="form-label">Note spéciale (optionnel)</label>
+        <input type="text" id="clientNote" class="form-input" placeholder="Ex: sans piment, bien cuit..."/>
+      </div>
+    </div>
+
+    <!-- Promo code -->
+    <div style="margin-bottom:.5rem">
+      <label class="form-label">Code promo</label>
+      <div class="promo-row">
+        <input type="text" id="promoInput" class="form-input" placeholder="MONCODE" style="text-transform:uppercase"/>
+        <button onclick="applyPromo()" class="btn btn-success btn-sm" style="white-space:nowrap">Appliquer</button>
+      </div>
+      <div class="promo-msg" id="promoMsg"></div>
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <!-- Price recap -->
+    <div class="price-recap" id="priceRecap"></div>
+
+    <!-- Payment -->
+    <div style="margin-bottom:1rem">
+      <div class="form-label" style="margin-bottom:8px">Mode de paiement</div>
+      <div class="pay-methods">
+        <div class="pay-method active" data-pay="whatsapp" onclick="selectPay(this,'whatsapp')">
+          <span class="pay-method-icon">💬</span>
+          <div class="pay-method-label">WhatsApp</div>
+        </div>
+        <div class="pay-method" data-pay="mtn" onclick="selectPay(this,'mtn')">
+          <span class="pay-method-icon">📱</span>
+          <div class="pay-method-label">MTN Money</div>
+        </div>
+        <div class="pay-method" data-pay="orange" onclick="selectPay(this,'orange')">
+          <span class="pay-method-icon">🟠</span>
+          <div class="pay-method-label">Orange</div>
+        </div>
+        <div class="pay-method" data-pay="cinetpay" onclick="selectPay(this,'cinetpay')">
+          <span class="pay-method-icon">🌍</span>
+          <div class="pay-method-label">Mobile Money</div>
+        </div>
+        <div class="pay-method" data-pay="stripe" onclick="selectPay(this,'stripe')">
+          <span class="pay-method-icon">💳</span>
+          <div class="pay-method-label">Carte bancaire</div>
+        </div>
+      </div>
+      <div id="paymentOnlineNotice" style="display:none;font-size:11px;color:#6B7280;text-align:center;margin-top:6px;padding:6px 10px;background:#F3F4F6;border-radius:8px">
+        🔒 Vous serez redirigé vers la page de paiement sécurisé après la commande
+      </div>
+    </div>
+    <button class="btn-commander btn-wa" id="btnCommander" onclick="commander()">Commander</button>
+  </div>
+</div>
+
+<!-- Leaflet CSS + JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="/css/leaflet-custom.css"/>
+
+<script>
+const RESTAURANT_ID  = '<%= restaurant._id %>';
+const RESTAURANT_TEL = '<%= (restaurant.telephone||"").replace(/\s/g,"") %>';
+const RESTAURANT_NOM = '<%= restaurant.nom.replace(/'/g,"\\'") %>';
+</script>
+<script src="/js/menu-public.js"></script>
+<script src="/js/map-client.js"></script>
+
+<%
+  chatbotRestaurantId  = restaurant._id;
+  chatbotRestaurantNom = restaurant.nom;
+  chatbotTheme         = 'client';
+%>
+<%- include('../partials/chatbot') %>
+</body></html>
