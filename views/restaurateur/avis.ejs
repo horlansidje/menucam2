@@ -1,0 +1,57 @@
+<%- include('../partials/head', {title:'Avis clients'}) %>
+<%- include('../partials/sidebar', {activePage:'avis'}) %>
+<div class="main-content">
+  <div class="topbar"><div class="topbar-left"><button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button><div class="topbar-title">Avis clients</div></div></div>
+  <div class="page-body">
+    <% if(success&&success.length>0){%><div class="alert alert-success"><i class="bi bi-check-circle"></i><%=success%></div><%}%>
+    <div style="display:grid;grid-template-columns:1fr 260px;gap:1.5rem;align-items:start">
+      <div>
+        <% if(avis.length===0){ %>
+          <div class="empty-state"><div class="empty-state-icon"><i class="bi bi-star"></i></div><h3>Aucun avis</h3><p>Les avis de vos clients apparaîtront ici après leurs commandes.</p></div>
+        <% } else { %>
+          <%avis.forEach(a=>{%>
+            <div class="card" style="margin-bottom:1rem">
+              <div class="card-body">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.75rem">
+                  <div>
+                    <div style="font-weight:700;font-size:14px"><%=a.client_nom%></div>
+                    <div style="color:#F59E0B;font-size:14px;margin-top:2px"><%for(let i=1;i<=5;i++){%><%=i<=a.note?'★':'☆'%><%}%></div>
+                  </div>
+                  <div style="font-size:12px;color:var(--text-tertiary)"><%=new Date(a.createdAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})%></div>
+                </div>
+                <%if(a.texte){%><p style="font-size:14px;color:var(--text-secondary);line-height:1.6;margin-bottom:.75rem"><%=a.texte%></p><%}%>
+                <%if(a.reponse){%>
+                  <div style="background:var(--brand-pale);border-left:3px solid var(--brand);border-radius:var(--r-xs);padding:10px 14px;font-size:13px;color:#92400E"><strong>🍽️ Votre réponse :</strong> <%=a.reponse%></div>
+                <%}else{%>
+                  <form method="POST" action="/avis/<%=a._id%>/repondre" style="display:flex;gap:8px;margin-top:8px">
+                    <input type="text" name="reponse" class="form-control" placeholder="Répondre à cet avis..." style="flex:1;font-size:13px;padding:8px 12px" required/>
+                    <button type="submit" class="btn btn-sm btn-primary">Répondre</button>
+                  </form>
+                <%}%>
+              </div>
+            </div>
+          <%});%>
+        <%}%>
+      </div>
+      <div class="card">
+        <div class="card-header-bar"><div class="card-title">📊 Distribution</div></div>
+        <div class="card-body">
+          <div style="text-align:center;margin-bottom:1.5rem">
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:3rem;font-weight:800;color:var(--brand)"><%=moyenne%></div>
+            <div style="color:#F59E0B;font-size:1.25rem;margin:4px 0"><%for(let i=1;i<=5;i++){%><%=i<=Math.round(moyenne)?'★':'☆'%><%}%></div>
+            <div style="font-size:13px;color:var(--text-tertiary)"><%=total%> avis</div>
+          </div>
+          <%distrib.forEach(d=>{const pct=total>0?Math.round(d.count/total*100):0;%>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px">
+              <span style="min-width:20px;color:#F59E0B;font-weight:700"><%=d.note%>★</span>
+              <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:<%=pct%>%;background:#F59E0B;border-radius:4px;transition:width .8s"></div></div>
+              <span style="min-width:24px;color:var(--text-tertiary);text-align:right"><%=d.count%></span>
+            </div>
+          <%});%>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/app.js"></script>
+</body></html>
