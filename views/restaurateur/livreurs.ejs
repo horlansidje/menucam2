@@ -1,0 +1,226 @@
+<%- include('../partials/head', {title:'Livreurs'}) %>
+<%- include('../partials/sidebar', {activePage:'livreurs'}) %>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="/css/leaflet-custom.css"/>
+<div class="main-content">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button>
+      <div class="topbar-title">Gestion des livreurs</div>
+    </div>
+    <div class="topbar-right"><div class="live-chip"><span class="status-dot"></span> Temps réel</div></div>
+  </div>
+  <div class="page-body">
+    <% if(error&&error.length>0){%><div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i><%=error%></div><%}%>
+    <% if(success&&success.length>0){%><div class="alert alert-success"><i class="bi bi-check-circle"></i><%=success%></div><%}%>
+
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:1.5rem;align-items:start;margin-bottom:1.5rem">
+      <!-- Liste livreurs -->
+      <div>
+        <% if(livreurs.length===0){ %>
+          <div class="empty-state"><div class="empty-state-icon"><i class="bi bi-scooter"></i></div><h3>Aucun livreur</h3><p>Ajoutez vos livreurs pour gérer les livraisons et leur donner accès à leur interface.</p></div>
+        <% } else { %>
+          <div style="display:flex;flex-direction:column;gap:1rem">
+            <% livreurs.forEach((l,li)=>{
+              const colors=['#F59E0B','#3B82F6','#10B981','#EF4444','#8B5CF6','#F97316','#14B8A6'];
+              const color=colors[li%colors.length];
+            %>
+              <div class="card">
+                <div class="card-body">
+                  <div style="display:flex;align-items:flex-start;gap:1rem">
+                    <div style="width:52px;height:52px;border-radius:50%;background:<%=color%>22;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;border:3px solid <%=color%>">🛵</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+                        <div style="font-weight:800;font-size:15px"><%=l.nom%></div>
+                        <span class="badge <%=l.statut==='disponible'?'badge-success':l.statut==='occupé'?'badge-warning':'badge-gray'%>"><%=l.statut%></span>
+                        <span class="badge badge-gray" style="font-size:11px"><i class="bi bi-check2-circle"></i> <%=l.commandes_livrees||0%> livraisons</span>
+                      </div>
+                      <div style="font-size:13px;color:var(--text-secondary);display:flex;flex-wrap:wrap;gap:10px">
+                        <span><i class="bi bi-telephone"></i> <%=l.telephone%></span>
+                        <%if(l.moto){%><span>🏍️ <%=l.moto%></span><%}%>
+                        <%if(l.zone){%><span><i class="bi bi-geo-alt"></i> <%=l.zone%></span><%}%>
+                      </div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
+                      <select onchange="updateStatut('<%=l._id%>',this.value)" class="form-control form-select" style="font-size:12px;padding:4px 8px;height:32px;width:130px">
+                        <option value="disponible" <%= l.statut==='disponible' ? 'selected' : '' %>>✅ Disponible</option>
+                        <option value="occupé"     <%= l.statut==='occupé'     ? 'selected' : '' %>>🟡 Occupé</option>
+                        <option value="inactif"    <%= l.statut==='inactif'    ? 'selected' : '' %>>⚫ Inactif</option>
+                      </select>
+                      <form method="POST" action="/livreurs/<%=l._id%>/supprimer" onsubmit="return confirm('Supprimer ce livreur ?')"><button type="submit" class="btn btn-secondary btn-sm btn-icon"><i class="bi bi-trash3"></i></button></form>
+                    </div>
+                  </div>
+
+                  <!-- Accès livreur -->
+                  <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+                    <div style="font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.6rem">Accès interface livreur</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px">
+                      <!-- Lien WhatsApp -->
+                      <button class="btn btn-sm btn-whatsapp" data-id="<%=l._id%>" data-tel="<%=l.telephone%>" data-nom="<%=l.nom%>" onclick="genererLienBtn(this)" style="background:#25D366;color:#fff;gap:6px">
+                        <i class="bi bi-whatsapp"></i> Envoyer lien WhatsApp
+                      </button>
+                      <!-- Définir mot de passe -->
+                      <button class="btn btn-sm btn-secondary" data-id="<%=l._id%>" data-nom="<%=l.nom%>" onclick="setPasswordBtn(this)">
+                        <i class="bi bi-key"></i> Définir mot de passe
+                      </button>
+                      <!-- Ouvrir interface livreur -->
+                      <a href="/livreur/dashboard" target="_blank" class="btn btn-sm btn-secondary">
+                        <i class="bi bi-box-arrow-up-right"></i> Voir interface
+                      </a>
+                    </div>
+                    <%if(l.password){%>
+                      <div style="margin-top:6px;font-size:12px;color:var(--accent-dark)"><i class="bi bi-check-circle"></i> Mot de passe défini · Se connecte via <strong><%=l.telephone%></strong></div>
+                    <%}else{%>
+                      <div style="margin-top:6px;font-size:12px;color:var(--text-tertiary)"><i class="bi bi-info-circle"></i> Aucun mot de passe — accès uniquement par lien WhatsApp</div>
+                    <%}%>
+                  </div>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+        <%}%>
+      </div>
+
+      <!-- Formulaire ajout -->
+      <div class="card">
+        <div class="card-header-bar"><div class="card-title">➕ Nouveau livreur</div></div>
+        <div class="card-body">
+          <form method="POST" action="/livreurs/nouveau">
+            <div style="margin-bottom:.9rem"><label class="form-label">Nom complet *</label><div class="input-group"><i class="bi bi-person"></i><input type="text" name="nom" class="form-control" placeholder="Ex: Jean-Paul Mbarga" required/></div></div>
+            <div style="margin-bottom:.9rem"><label class="form-label">Téléphone *</label><div class="input-group"><i class="bi bi-telephone"></i><input type="tel" name="telephone" class="form-control" placeholder="6XX XXX XXX" required/></div></div>
+            <div style="margin-bottom:.9rem"><label class="form-label">Type de moto</label><input type="text" name="moto" class="form-control" placeholder="Ex: TVS King, Benelli"/></div>
+            <div style="margin-bottom:1.25rem"><label class="form-label">Zone de couverture</label><input type="text" name="zone" class="form-control" placeholder="Ex: Akwa, Bonamoussadi"/></div>
+            <button type="submit" class="btn btn-primary" style="width:100%"><i class="bi bi-person-plus"></i> Ajouter</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Carte livreurs -->
+    <div class="card">
+      <div class="card-header-bar">
+        <div><div class="card-title"><i class="bi bi-map"></i> Carte des livraisons</div><div class="card-subtitle">Commandes assignées à vos livreurs</div></div>
+        <div style="display:flex;gap:8px">
+          <span id="mapStatusBadge" class="badge badge-gray">Chargement...</span>
+          <button onclick="refreshLivreursMap()" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-clockwise"></i> Actualiser</button>
+        </div>
+      </div>
+      <div id="livreursMap" class="leaflet-map-wrap" style="height:480px;border-radius:0 0 16px 16px"></div>
+      <div class="card-body" style="padding:.75rem 1.25rem">
+        <div class="map-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#1B4332"></div> Restaurant</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#F59E0B"></div> En attente</div>
+          <% livreurs.forEach((l,li)=>{ const colors=['#F59E0B','#3B82F6','#10B981','#EF4444','#8B5CF6','#F97316']; %>
+            <div class="legend-item"><div class="legend-dot" style="background:<%=colors[li%colors.length]%>"></div> <%=l.nom%></div>
+          <%}); %>
+        </div>
+        <div id="mapStats" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal mot de passe -->
+<div id="modalPassword" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;display:none;align-items:center;justify-content:center;padding:1.5rem">
+  <div style="background:#fff;border-radius:20px;padding:2rem;max-width:360px;width:100%">
+    <h3 style="font-family:'Bricolage Grotesque',sans-serif;font-size:1.1rem;margin-bottom:.5rem" id="modalPwdTitle">Définir le mot de passe</h3>
+    <p style="font-size:13px;color:#6B7280;margin-bottom:1.25rem">Le livreur utilisera son téléphone + ce mot de passe pour se connecter.</p>
+    <div class="form-group">
+      <label class="form-label">Nouveau mot de passe (min. 4 caractères)</label>
+      <div class="input-group"><i class="bi bi-lock"></i><input type="password" id="pwdInput" class="form-control" placeholder="Ex: 1234"/></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:1rem">
+      <button onclick="closeModal()" class="btn btn-secondary" style="flex:1">Annuler</button>
+      <button onclick="savePwd()" class="btn btn-primary" style="flex:1" id="savePwdBtn"><i class="bi bi-check-lg"></i> Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/js/map-dashboard.js"></script>
+<script src="/js/app.js"></script>
+<script>
+const livreursList = <%- JSON.stringify(livreurs) %>;
+let currentLivreurId = null;
+let livreursMapInstance = null;
+
+async function updateStatut(id, statut) {
+  await fetch(`/livreurs/${id}/statut`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({statut}) });
+  showToast(`Statut mis à jour : ${statut}`, 'success');
+}
+
+// ── Lien WhatsApp ─────────────────────────────────────────────
+function genererLienBtn(btn) { genererLien(btn.dataset.id, btn.dataset.tel, btn.dataset.nom); }
+function setPasswordBtn(btn) { setPassword(btn.dataset.id, btn.dataset.nom); }
+async function genererLien(id, telephone, nom) {
+  const res = await fetch(`/livreur/generer-lien/${id}`, { method:'POST', headers:{'Content-Type':'application/json'} });
+  const data = await res.json();
+  if (!data.ok) return showToast('Erreur génération lien', 'danger');
+  const msg = `🛵 *MenuCam Livreur — ${nom}*\n\nVoici votre lien d'accès à votre interface livreur :\n\n${data.lien}\n\n⚠️ Ce lien est valable 48h.\nAccès : commandes, carte, mises à jour statut.`;
+  const phone = telephone.replace(/\D/g,'');
+  const waUrl = `https://wa.me/${phone.startsWith('237')?phone:'237'+phone}?text=${encodeURIComponent(msg)}`;
+  window.open(waUrl, '_blank');
+  showToast('Lien envoyé sur WhatsApp ✅', 'success');
+}
+
+// ── Mot de passe ──────────────────────────────────────────────
+function setPassword(id, nom) {
+  currentLivreurId = id;
+  document.getElementById('modalPwdTitle').textContent = `Mot de passe — ${nom}`;
+  document.getElementById('pwdInput').value = '';
+  const modal = document.getElementById('modalPassword');
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('pwdInput').focus(), 100);
+}
+
+function closeModal() {
+  document.getElementById('modalPassword').style.display = 'none';
+  currentLivreurId = null;
+}
+
+async function savePwd() {
+  const pwd = document.getElementById('pwdInput').value.trim();
+  if (pwd.length < 4) return showToast('Minimum 4 caractères', 'danger');
+  const btn = document.getElementById('savePwdBtn');
+  btn.disabled = true; btn.textContent = '...';
+  const res = await fetch(`/livreur/set-password/${currentLivreurId}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pwd}) });
+  const data = await res.json();
+  if (data.ok) { showToast('Mot de passe défini ✅', 'success'); closeModal(); location.reload(); }
+  else { showToast('Erreur', 'danger'); btn.disabled=false; btn.innerHTML='<i class="bi bi-check-lg"></i> Enregistrer'; }
+}
+
+// Fermer modal en cliquant dehors
+document.getElementById('modalPassword').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+// ── Carte ─────────────────────────────────────────────────────
+async function loadLivreursMap() {
+  try {
+    const [commandes, restaurant] = await Promise.all([
+      fetch('/maps/commandes').then(r=>r.json()),
+      fetch('/maps/restaurant').then(r=>r.json()),
+    ]);
+    if (livreursMapInstance) { livreursMapInstance.remove(); livreursMapInstance=null; document.getElementById('livreursMap').innerHTML=''; }
+    const badge = document.getElementById('mapStatusBadge');
+    const stats = document.getElementById('mapStats');
+    if (stats) stats.innerHTML = `
+      <span class="badge badge-purple" style="font-size:12px">🛵 ${commandes.filter(c=>c.statut==='en_livraison').length} en livraison</span>
+      <span class="badge badge-warning" style="font-size:12px">⏳ ${commandes.filter(c=>c.statut==='en_attente').length} en attente</span>
+      <span class="badge badge-gray" style="font-size:12px">📦 ${commandes.length} total</span>`;
+    livreursMapInstance = initLivreursMap(commandes, livreursList, restaurant);
+    if (badge) { badge.className='badge badge-success'; badge.innerHTML=`✅ ${commandes.length} livraison(s)`; }
+  } catch(e) {
+    const badge=document.getElementById('mapStatusBadge');
+    if(badge){badge.className='badge badge-danger';badge.textContent='❌ Erreur';}
+  }
+}
+
+function refreshLivreursMap() {
+  const badge=document.getElementById('mapStatusBadge');
+  if(badge){badge.className='badge badge-gray';badge.textContent='Chargement...';}
+  loadLivreursMap();
+}
+
+loadLivreursMap();
+setInterval(refreshLivreursMap, 30000);
+</script>
+</body></html>
