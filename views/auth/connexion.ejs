@@ -1,0 +1,55 @@
+<%- include('../partials/head', {title:'Connexion'}) %>
+<style>
+.auth-page{display:grid;grid-template-columns:1fr 1fr;min-height:100vh}
+.auth-panel-left{background:#fff;padding:3rem;display:flex;flex-direction:column;justify-content:center;max-width:480px;width:100%;margin:0 auto}
+.auth-panel-right{background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);display:flex;align-items:center;justify-content:center;padding:2rem;position:relative;overflow:hidden}
+.auth-panel-right::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(245,158,11,.15) 0,transparent 60%),radial-gradient(ellipse at 70% 20%,rgba(16,185,129,.1) 0,transparent 50%)}
+.auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:2.5rem}
+.auth-logo-icon{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#F59E0B,#D97706);display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+.auth-logo-name{font-family:'Bricolage Grotesque',sans-serif;font-size:1.35rem;font-weight:800;color:#111}
+.auth-title{font-family:'Bricolage Grotesque',sans-serif;font-size:1.8rem;font-weight:800;color:#111;margin-bottom:.5rem}
+.auth-sub{color:#6B7280;font-size:14px;margin-bottom:2rem}
+.form-field{margin-bottom:1.1rem}
+.btn-submit{width:100%;padding:12px;background:#F59E0B;color:#111;border:none;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;transition:all .2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-submit:hover{background:#D97706;transform:translateY(-1px);box-shadow:0 4px 14px rgba(245,158,11,.4)}
+.auth-switch{font-size:14px;color:#6B7280;margin-top:1.25rem;text-align:center}
+.auth-switch a{color:#F59E0B;font-weight:600}
+.back-link{display:inline-flex;align-items:center;gap:5px;color:#6B7280;font-size:13px;margin-bottom:2rem;transition:color .2s}
+.back-link:hover{color:#111}
+.illus-wrap{position:relative;z-index:1;display:flex;flex-direction:column;gap:12px;min-width:220px}
+.illus-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:1rem 1.25rem;backdrop-filter:blur(10px)}
+.illus-card.accent{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.2)}
+.illus-num{font-family:'Bricolage Grotesque',sans-serif;font-size:1.8rem;font-weight:800;color:#fff}
+.illus-label{font-size:12px;color:rgba(255,255,255,.45);margin-top:2px}
+@media(max-width:768px){.auth-page{grid-template-columns:1fr}.auth-panel-right{display:none}.auth-panel-left{max-width:100%;padding:2rem 1.5rem}}
+</style>
+
+<div class="auth-page">
+  <div class="auth-panel-left">
+    <a href="/" class="back-link"><i class="bi bi-arrow-left"></i> Retour</a>
+    <div class="auth-logo"><div class="auth-logo-icon">🍽️</div><div class="auth-logo-name">MenuCam</div></div>
+    <h1 class="auth-title">Bon retour 👋</h1>
+    <p class="auth-sub">Connectez-vous pour gérer votre restaurant.</p>
+    <% if(error&&error.length>0){%><div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i><%=error%></div><%}%>
+    <form method="POST" action="/auth/connexion">
+      <div class="form-field">
+        <label class="form-label">Email</label>
+        <div class="input-group"><i class="bi bi-envelope"></i><input type="email" name="email" class="form-control" placeholder="contact@monresto.cm" required autofocus/></div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Mot de passe</label>
+        <div class="input-group"><i class="bi bi-lock"></i><input type="password" name="password" class="form-control" placeholder="Votre mot de passe" required/></div>
+      </div>
+      <button type="submit" class="btn-submit"><i class="bi bi-box-arrow-in-right"></i> Se connecter</button>
+    </form>
+    <p class="auth-switch">Pas encore de compte ? <a href="/auth/inscription">Créer un compte gratuit</a></p>
+  </div>
+  <div class="auth-panel-right">
+    <div class="illus-wrap">
+      <div class="illus-card"><div class="illus-num">12</div><div class="illus-label">Commandes aujourd'hui</div></div>
+      <div class="illus-card accent"><div class="illus-num">47 500</div><div class="illus-label">FCFA générés ce jour</div></div>
+      <div class="illus-card"><div class="illus-num">⭐ 4.8</div><div class="illus-label">Note moyenne clients</div></div>
+    </div>
+  </div>
+</div>
+</body></html>
