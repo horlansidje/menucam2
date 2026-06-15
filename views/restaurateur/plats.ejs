@@ -1,0 +1,52 @@
+<%- include('../partials/head', {title:'Mes plats'}) %>
+<%- include('../partials/sidebar', {activePage:'plats'}) %>
+<div class="main-content">
+  <div class="topbar">
+    <div class="topbar-left"><button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button><div class="topbar-title">Menu & Plats</div></div>
+    <div class="topbar-right"><a href="/plats/nouveau" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Ajouter un plat</a></div>
+  </div>
+  <div class="page-body">
+    <% if(error&&error.length>0){%><div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i><%=error%></div><%}%>
+    <% if(success&&success.length>0){%><div class="alert alert-success"><i class="bi bi-check-circle"></i><%=success%></div><%}%>
+    <div class="page-header">
+      <div><div class="page-title">Menu & Plats</div><div class="page-subtitle"><%=plats.length%> plat(s) dans votre menu</div></div>
+    </div>
+    <% if(cats.length>0){%>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1.5rem">
+        <button class="btn btn-sm filter-pill active" data-group="cats" data-cat="tous" style="border-radius:999px">Tous (<%=plats.length%>)</button>
+        <%cats.forEach(cat=>{%><button class="btn btn-sm btn-secondary filter-pill" data-group="cats" data-cat="<%=cat%>" data-cat-selector style="border-radius:999px"><%=cat%></button><%});%>
+      </div>
+    <%}%>
+    <% if(plats.length===0){ %>
+      <div class="empty-state"><div class="empty-state-icon"><i class="bi bi-egg-fried"></i></div><h3>Menu vide</h3><p>Ajoutez vos premiers plats pour générer votre QR code et commencer à recevoir des commandes.</p><a href="/plats/nouveau" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Ajouter mon premier plat</a></div>
+    <% } else { %>
+      <div class="plats-grid">
+        <%plats.forEach(plat=>{%>
+          <div class="plat-card <%=!plat.disponible?'unavailable':''%>" data-cat-item="<%=plat.categorie%>">
+            <div class="plat-img">
+              <%if(plat.photo){%><img src="<%=plat.photo%>" alt="<%=plat.nom%>"/><%}else{%><div class="plat-img-placeholder"><i class="bi bi-egg-fried"></i></div><%}%>
+              <span class="plat-cat-chip"><%=plat.categorie%></span>
+            </div>
+            <div class="plat-body">
+              <div class="plat-name"><%=plat.nom%></div>
+              <div class="plat-desc"><%=plat.description||'Aucune description'%></div>
+              <div class="plat-footer">
+                <div>
+                  <div class="plat-price"><%=plat.prix.toLocaleString('fr-FR')%> FCFA</div>
+                  <span class="badge dispo-badge <%=plat.disponible?'badge-success':'badge-gray'%>" style="font-size:11px;margin-top:4px"><%=plat.disponible?'Disponible':'Indisponible'%></span>
+                </div>
+                <div class="plat-actions">
+                  <button class="btn btn-ghost btn-icon btn-sm" onclick="toggleDispo('<%=plat._id%>',this)" title="<%=plat.disponible?'Rendre indisponible':'Rendre disponible'%>"><i class="bi <%=plat.disponible?'bi-eye':'bi-eye-slash'%>"></i></button>
+                  <a href="/plats/<%=plat._id%>/modifier" class="btn btn-ghost btn-icon btn-sm" title="Modifier"><i class="bi bi-pencil"></i></a>
+                  <form method="POST" action="/plats/<%=plat._id%>/supprimer" style="display:inline" onsubmit="return confirm('Supprimer ce plat ?')"><button type="submit" class="btn btn-ghost btn-icon btn-sm" title="Supprimer"><i class="bi bi-trash3"></i></button></form>
+                </div>
+              </div>
+            </div>
+          </div>
+        <%});%>
+      </div>
+    <%}%>
+  </div>
+</div>
+<script src="/js/app.js"></script>
+</body></html>
