@@ -1,0 +1,144 @@
+/* ── Leaflet custom styles ───────────────────────────────────── */
+.leaflet-map-wrap {
+  border-radius: var(--r-md, 16px);
+  overflow: hidden;
+  border: 1px solid var(--border, #E5E7EB);
+  box-shadow: var(--shadow, 0 4px 6px rgba(0,0,0,0.08));
+}
+
+/* Custom marker popup */
+.leaflet-popup-content-wrapper {
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
+  border: none !important;
+  padding: 0 !important;
+}
+.leaflet-popup-content {
+  margin: 0 !important;
+  min-width: 220px;
+}
+.map-popup {
+  padding: 14px 16px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+}
+.map-popup-title {
+  font-weight: 800;
+  font-size: 14px;
+  color: #111827;
+  margin-bottom: 6px;
+  font-family: 'Bricolage Grotesque', sans-serif;
+}
+.map-popup-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: #6B7280;
+  margin-bottom: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.map-popup-row strong { color: #374151; }
+.map-popup-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+.map-popup-total {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-weight: 800;
+  color: #F59E0B;
+  font-size: 15px;
+  margin-top: 8px;
+}
+.leaflet-popup-tip { background: #fff !important; }
+
+/* GPS position badge */
+.gps-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #D1FAE5;
+  color: #059669;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 6px;
+}
+.gps-badge.loading {
+  background: #FEF3C7;
+  color: #D97706;
+}
+.gps-badge.error {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+/* Map container in client menu */
+.client-map-section {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #E5E7EB;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.client-map-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #E5E7EB;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.client-map-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#clientMap { height: 220px; }
+
+/* Map in dashboard */
+#commandesMap { height: 420px; }
+#livreursMap  { height: 480px; }
+
+/* Pulsing marker */
+@keyframes markerPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(245,158,11,0.5); }
+  70%  { box-shadow: 0 0 0 12px rgba(245,158,11,0); }
+  100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+}
+.pulse-marker { animation: markerPulse 1.8s infinite; }
+
+/* Legend */
+.map-legend {
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #6B7280;
+  font-weight: 500;
+}
+.legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
