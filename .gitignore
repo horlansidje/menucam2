@@ -1,0 +1,30 @@
+# Dépendances
+node_modules/
+
+# Données locales NeDB
+data/
+
+# Variables d'environnement
+.env
+.env.local
+.env.production
+
+# Uploads locaux
+public/uploads/*
+!public/uploads/.gitkeep
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build
+dist/
+.cache/
