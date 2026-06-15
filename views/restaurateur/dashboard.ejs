@@ -1,0 +1,123 @@
+<%- include('../partials/head', {title: 'Dashboard'}) %>
+<%- include('../partials/sidebar', {activePage: 'dashboard', enAttenteCount: stats.enAttente}) %>
+<div class="main-content">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button>
+      <div class="topbar-title">Dashboard</div>
+    </div>
+    <div class="topbar-right">
+      <div class="live-chip"><span class="status-dot"></span> Temps réel</div>
+      <a href="/menu/<%= restaurant._id %>" target="_blank" class="btn btn-secondary btn-sm"><i class="bi bi-eye"></i> Menu public</a>
+    </div>
+  </div>
+  <div class="page-body">
+    <% if(success&&success.length>0){%><div class="alert alert-success"><i class="bi bi-check-circle"></i><%=success%></div><%}%>
+    <div class="page-header">
+      <div><div class="page-title">Bonjour, <%= restaurant.nom %> 👋</div><div class="page-subtitle">Voici votre activité du jour</div></div>
+      <a href="/plats/nouveau" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Ajouter un plat</a>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card stat-brand"><div class="stat-card-icon" style="background:#FEF3C7;color:#D97706"><i class="bi bi-egg-fried" style="font-size:1.3rem"></i></div><div class="stat-card-value"><%=stats.totalPlats%></div><div class="stat-card-label">Plats au menu</div></div>
+      <div class="stat-card stat-green"><div class="stat-card-icon" style="background:#D1FAE5;color:#059669"><i class="bi bi-bag-check" style="font-size:1.3rem"></i></div><div class="stat-card-value"><%=stats.commandesAujourdhui%></div><div class="stat-card-label">Commandes aujourd'hui</div></div>
+      <div class="stat-card stat-red"><div class="stat-card-icon" style="background:#FEE2E2;color:#DC2626"><i class="bi bi-clock" style="font-size:1.3rem"></i></div><div class="stat-card-value"><%=stats.enAttente%></div><div class="stat-card-label">En attente</div></div>
+      <div class="stat-card stat-blue"><div class="stat-card-icon" style="background:#DBEAFE;color:#2563EB"><i class="bi bi-currency-dollar" style="font-size:1.3rem"></i></div><div class="stat-card-value"><%=stats.caAujourdhui.toLocaleString('fr-FR')%></div><div class="stat-card-label">FCFA aujourd'hui</div></div>
+      <div class="stat-card stat-purple"><div class="stat-card-icon" style="background:#EDE9FE;color:#7C3AED"><i class="bi bi-star" style="font-size:1.3rem"></i></div><div class="stat-card-value"><%=stats.noteMoyenne||'—'%></div><div class="stat-card-label">Note moyenne (<%=stats.nbAvis%> avis)</div></div>
+      <div class="stat-card"><div class="stat-card-icon" style="background:#D1FAE5;color:#059669"><i class="bi bi-credit-card-2-front" style="font-size:1.3rem"></i></div><div class="stat-card-value"><%=stats.paiementsConfirmes||0%></div><div class="stat-card-label">Paiements confirmés</div></div>
+      <% if(stats.paiementsEnAttente > 0) { %>
+      <div class="stat-card"><div class="stat-card-icon" style="background:#FEF3C7;color:#D97706"><i class="bi bi-hourglass-split" style="font-size:1.3rem"></i></div><div class="stat-card-value"><%=stats.paiementsEnAttente%></div><div class="stat-card-label">Paiements en attente</div></div>
+      <% } %>
+    </div>
+
+    <div style="display:grid;grid-template-columns:320px 1fr;gap:1.5rem;margin-bottom:1.5rem">
+      <!-- QR Card -->
+      <div class="card">
+        <div class="card-header-bar"><div class="card-title">📱 Votre QR Code</div><span class="badge badge-success"><i class="bi bi-circle-fill" style="font-size:8px"></i> En ligne</span></div>
+        <div class="qr-display">
+          <img src="<%=qrDataUrl%>" alt="QR Code"/>
+          <p class="qr-url-text"><%=menuUrl%></p>
+          <div style="display:flex;gap:8px;justify-content:center">
+            <a href="<%=qrDataUrl%>" download="qrcode-<%=restaurant.nom.replace(/\s/g,'-')%>.png" class="btn btn-sm" style="background:#F59E0B;color:#111;font-weight:600"><i class="bi bi-download"></i> Télécharger</a>
+            <a href="<%=menuUrl%>" target="_blank" class="btn btn-sm btn-secondary"><i class="bi bi-box-arrow-up-right"></i> Ouvrir</a>
+          </div>
+        </div>
+        <div class="card-body" style="padding-top:.75rem">
+          <p style="font-size:12px;color:var(--text-tertiary);text-align:center;margin-bottom:10px"><i class="bi bi-lightbulb"></i> Imprimez et collez sur vos tables</p>
+          <% if(restaurant.slug) { %>
+          <div style="background:var(--brand-pale);border:1px solid var(--brand-light);border-radius:10px;padding:10px;text-align:center">
+            <div style="font-size:11px;font-weight:700;color:var(--brand-dark);margin-bottom:4px">🌐 URL PUBLIQUE</div>
+            <a href="/restaurants/<%= restaurant.slug %>" target="_blank" style="font-size:12px;color:var(--brand-dark);font-weight:600;word-break:break-all">/restaurants/<%= restaurant.slug %></a>
+            <button onclick="navigator.clipboard.writeText(window.location.origin+'/restaurants/<%= restaurant.slug %>').then(()=>showToast('Lien copié !','success'))" class="btn btn-sm" style="margin-top:6px;background:var(--brand);color:#111;font-weight:700;width:100%;display:flex;align-items:center;justify-content:center;gap:5px"><i class="bi bi-clipboard"></i> Copier le lien</button>
+          </div>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Recent commandes -->
+      <div class="card">
+        <div class="card-header-bar"><div class="card-title">📦 Commandes récentes</div><a href="/commandes" class="btn btn-ghost btn-sm">Voir tout <i class="bi bi-arrow-right"></i></a></div>
+        <div class="card-body" style="padding:0">
+          <% if(recentes.length===0){ %>
+            <div class="empty-state"><div class="empty-state-icon"><i class="bi bi-bag-x"></i></div><h3>Aucune commande</h3><p>Partagez votre QR code pour recevoir vos premières commandes !</p></div>
+          <% } else { %>
+            <div class="table-wrap" style="border:none;border-radius:0">
+              <table>
+                <thead><tr><th>Client</th><th>Articles</th><th>Type</th><th>Total</th><th>Statut</th><th></th></tr></thead>
+                <tbody>
+                  <% recentes.forEach(cmd=>{ const map={en_attente:['warning','⏳ En attente'],en_preparation:['info','👨‍🍳 Préparation'],en_livraison:['purple','🛵 En route'],servie:['success','✅ Servie'],livree:['success','✅ Livrée'],annulee:['danger','❌ Annulée']}; const [type,label]=map[cmd.statut]||['gray',cmd.statut]; %>
+                    <tr>
+                      <td><div style="font-weight:600;font-size:14px"><%=cmd.client_nom%></div><div style="font-size:12px;color:var(--text-tertiary)"><%=cmd.num_commande||''%></div></td>
+                      <td style="color:var(--text-secondary);font-size:13px"><%=cmd.items.length%> article(s)</td>
+                      <td><span style="font-size:13px"><%=cmd.type_livraison==='livraison'?'🛵':cmd.type_livraison==='a_emporter'?'🛍️':'🪑'%></span></td>
+                      <td style="font-weight:700;color:var(--brand);font-family:'Bricolage Grotesque',sans-serif"><%=cmd.total.toLocaleString('fr-FR')%> F</td>
+                      <td><span class="badge badge-<%=type%>"><%=label%></span></td>
+                      <td><a href="/commandes/<%=cmd._id%>/recu" target="_blank" class="btn btn-ghost btn-sm btn-icon" title="Reçu PDF"><i class="bi bi-file-earmark-pdf"></i></a></td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="card">
+      <div class="card-header-bar"><div class="card-title">⚡ Actions rapides</div></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
+          <% const actions=[['plats/nouveau','bi-plus-circle','Ajouter un plat','#FEF3C7','#D97706'],['commandes','bi-bag-check','Commandes','#D1FAE5','#059669'],['analytics','bi-bar-chart-line','Analytics','#DBEAFE','#2563EB'],['promos','bi-tag','Créer promo','#EDE9FE','#7C3AED'],['livreurs','bi-scooter','Livreurs','#FEE2E2','#DC2626'],['avis','bi-star','Avis clients','#FEF3C7','#D97706'],['dashboard/profil','bi-person-gear','Mon profil','#F3F4F6','#6B7280'],['categories','bi-tags','Catégories','#FEF3C7','#D97706'],['horaires','bi-clock','Horaires','#DBEAFE','#2563EB'],['fidelite','bi-star-fill','Fidélité','#EDE9FE','#7C3AED'],['restaurants','bi-globe','Page publique','#D1FAE5','#059669']]; %>
+          <% actions.forEach(([href,icon,label,bg,color])=>{ %>
+            <a href="/<%=href%>" <%=href.includes('menu/')?'target="_blank"':''%> style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:1.25rem;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);transition:all var(--t);text-decoration:none;color:var(--text-primary)" onmouseover="this.style.background='<%=bg%>';this.style.borderColor='<%=color%>';this.style.color='<%=color%>'" onmouseout="this.style.background='';this.style.borderColor='';this.style.color=''">
+              <i class="bi <%=icon%>" style="font-size:1.5rem"></i>
+              <span style="font-size:13px;font-weight:600;text-align:center"><%=label%></span>
+            </a>
+          <% }); %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/app.js"></script>
+<script>
+const socket = io();
+socket.emit('rejoindre_restaurant', '<%= restaurant._id %>');
+socket.on('nouvelle_commande', data => {
+  const c = data.commande;
+  showToast(`🛒 Nouvelle commande ! ${c.client_nom} — ${c.total.toLocaleString('fr-FR')} FCFA`);
+  const badge = document.querySelector('.nav-badge');
+  if (badge) badge.textContent = parseInt(badge.textContent||0)+1;
+});
+</script>
+<%
+  chatbotRestaurantId  = locals.restaurantId || (typeof restaurant !== 'undefined' ? restaurant._id : '');
+  chatbotRestaurantNom = locals.restaurantNom || 'MenuCam';
+  chatbotTheme         = 'admin';
+%>
+<%- include('../partials/chatbot') %>
+</body></html>
+<!-- Public URL section injected by dashboard patch — see routes/dashboard.js -->
