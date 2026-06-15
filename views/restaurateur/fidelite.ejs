@@ -1,0 +1,222 @@
+<%- include('../partials/head', {title:'Fidélité'}) %>
+<%- include('../partials/sidebar', {activePage:'fidelite', enAttenteCount:0}) %>
+<div class="main-content">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button>
+      <div class="topbar-title">Programme de fidélité</div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-primary btn-sm" onclick="openModal('modalOffre')"><i class="bi bi-gift"></i> Envoyer une offre</button>
+    </div>
+  </div>
+  <div class="page-body">
+    <% if(error&&error.length>0){%><div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i><%=error%></div><%}%>
+    <% if(success&&success.length>0){%><div class="alert alert-success"><i class="bi bi-check-circle"></i><%=success%></div><%}%>
+
+    <div class="page-header">
+      <div><div class="page-title">Programme de fidélité</div><div class="page-subtitle">Récompensez automatiquement vos clients les plus fidèles</div></div>
+    </div>
+
+    <!-- Config + Stats -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem">
+      <!-- Config -->
+      <div class="card">
+        <div class="card-header-bar">
+          <div class="card-title">⚙️ Configuration</div>
+          <span class="badge <%= config.actif ? 'badge-success' : 'badge-gray' %>"><%= config.actif ? 'Actif' : 'Inactif' %></span>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="/fidelite/config">
+            <div class="form-field">
+              <label class="form-label">
+                <label class="toggle-inline">
+                  <input type="checkbox" name="actif" <%= config.actif ? 'checked' : '' %> style="width:auto;margin-right:8px"/>
+                  Activer le programme de fidélité
+                </label>
+              </label>
+            </div>
+            <div class="form-field">
+              <label class="form-label">Montant mensuel minimum (FCFA)</label>
+              <div class="input-group"><i class="bi bi-currency-dollar"></i>
+                <input type="number" name="montant_min" class="form-control" value="<%= config.montant_min || 50000 %>" min="1000" step="1000"/>
+              </div>
+              <p style="font-size:12px;color:var(--text-tertiary);margin-top:4px">Les clients dépassant ce montant reçoivent automatiquement une récompense.</p>
+            </div>
+            <div class="form-field">
+              <label class="form-label">Description de la récompense</label>
+              <input type="text" name="description" class="form-control" value="<%= config.description || '' %>" placeholder="Ex: 10% de réduction sur votre prochaine commande"/>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Enregistrer</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div style="display:flex;flex-direction:column;gap:1rem">
+        <div class="stat-card stat-brand">
+          <div class="stat-card-icon" style="background:#FEF3C7;color:#D97706"><i class="bi bi-people" style="font-size:1.3rem"></i></div>
+          <div class="stat-card-value"><%= clients.length %></div>
+          <div class="stat-card-label">Clients ce mois</div>
+        </div>
+        <div class="stat-card stat-green">
+          <div class="stat-card-icon" style="background:#D1FAE5;color:#059669"><i class="bi bi-star" style="font-size:1.3rem"></i></div>
+          <div class="stat-card-value"><%= clients_fideles.length %></div>
+          <div class="stat-card-label">Clients fidèles ce mois</div>
+        </div>
+        <div class="stat-card stat-purple">
+          <div class="stat-card-icon" style="background:#EDE9FE;color:#7C3AED"><i class="bi bi-gift" style="font-size:1.3rem"></i></div>
+          <div class="stat-card-value"><%= recompenses.length %></div>
+          <div class="stat-card-label">Récompenses envoyées</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tableau clients fidèles -->
+    <div class="card" style="margin-bottom:1.5rem">
+      <div class="card-header-bar">
+        <div class="card-title">⭐ Clients fidèles ce mois <span class="badge badge-success" style="margin-left:8px"><%= clients_fideles.length %></span></div>
+      </div>
+      <% if(clients_fideles.length === 0) { %>
+        <div class="empty-state" style="padding:2rem">
+          <div class="empty-state-icon"><i class="bi bi-person-heart"></i></div>
+          <h3>Aucun client fidèle ce mois</h3>
+          <p>Configurez un montant minimum et vos clients seront récompensés automatiquement.</p>
+        </div>
+      <% } else { %>
+        <div class="table-wrap" style="border:none;border-radius:0">
+          <table>
+            <thead><tr><th>Client</th><th>Téléphone</th><th>Commandes</th><th>Total mensuel</th><th>Progression</th></tr></thead>
+            <tbody>
+            <% clients_fideles.forEach(c => { const pct = Math.min(100, Math.round(c.total/config.montant_min*100)); %>
+              <tr>
+                <td><div style="font-weight:700"><%= c.nom %></div></td>
+                <td><%= c.telephone || '—' %></td>
+                <td><span class="badge badge-info"><%= c.nb %> cmd</span></td>
+                <td style="font-weight:700;color:var(--accent)"><%= c.total.toLocaleString('fr-FR') %> FCFA</td>
+                <td style="min-width:140px">
+                  <div style="background:var(--border);border-radius:999px;height:8px;overflow:hidden">
+                    <div style="background:linear-gradient(90deg,var(--brand),var(--accent));height:100%;width:<%= pct %>%;border-radius:999px;transition:width .5s"></div>
+                  </div>
+                  <div style="font-size:11px;color:var(--text-tertiary);margin-top:2px"><%= pct %>%</div>
+                </td>
+              </tr>
+            <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Top clients (tous) -->
+    <% if(clients.length > clients_fideles.length) { %>
+    <div class="card" style="margin-bottom:1.5rem">
+      <div class="card-header-bar"><div class="card-title">📊 Tous les clients ce mois</div></div>
+      <div class="table-wrap" style="border:none;border-radius:0">
+        <table>
+          <thead><tr><th>Client</th><th>Téléphone</th><th>Commandes</th><th>Total</th><th>Statut</th></tr></thead>
+          <tbody>
+          <% clients.slice(0,15).forEach(c => {
+            const estFidele = config.montant_min > 0 && c.total >= config.montant_min;
+            const pct = config.montant_min > 0 ? Math.min(100,Math.round(c.total/config.montant_min*100)) : 0;
+          %>
+            <tr>
+              <td><div style="font-weight:600"><%= c.nom %></div></td>
+              <td style="color:var(--text-secondary)"><%= c.telephone || '—' %></td>
+              <td><%= c.nb %></td>
+              <td style="font-weight:600"><%= c.total.toLocaleString('fr-FR') %> F</td>
+              <td><span class="badge <%= estFidele ? 'badge-success' : 'badge-gray' %>"><%= estFidele ? '⭐ Fidèle' : `${pct}%` %></span></td>
+            </tr>
+          <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <% } %>
+
+    <!-- Historique récompenses -->
+    <div class="card">
+      <div class="card-header-bar"><div class="card-title">🎁 Historique des récompenses</div></div>
+      <% if(recompenses.length === 0) { %>
+        <div class="empty-state" style="padding:2rem"><div class="empty-state-icon"><i class="bi bi-gift"></i></div><h3>Aucune récompense</h3><p>Les récompenses apparaîtront ici.</p></div>
+      <% } else { %>
+        <div class="table-wrap" style="border:none;border-radius:0">
+          <table>
+            <thead><tr><th>Client</th><th>Type</th><th>Offre</th><th>Note</th><th>Date</th><th></th></tr></thead>
+            <tbody>
+            <% recompenses.forEach(r => { %>
+              <tr>
+                <td><div style="font-weight:600"><%= r.client_nom %></div><div style="font-size:12px;color:var(--text-tertiary)"><%= r.client_telephone %></div></td>
+                <td><span class="badge <%= r.statut==='auto'?'badge-success':'badge-info' %>"><%= r.statut==='auto'?'Auto':'Manuel' %></span></td>
+                <td style="font-size:13px"><%= r.valeur || r.type_offre %></td>
+                <td style="font-size:13px;color:var(--text-secondary)"><%= r.note || '—' %></td>
+                <td style="font-size:12px;color:var(--text-tertiary)"><%= new Date(r.createdAt).toLocaleDateString('fr-FR') %></td>
+                <td>
+                  <form method="POST" action="/fidelite/<%= r._id %>/supprimer" style="display:inline" onsubmit="return confirm('Supprimer ?')">
+                    <button class="btn btn-ghost btn-sm btn-icon"><i class="bi bi-trash3"></i></button>
+                  </form>
+                </td>
+              </tr>
+            <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<!-- Modal offre manuelle -->
+<div class="modal-backdrop" id="modalOffre" style="display:none">
+  <div class="modal-box" style="max-width:460px">
+    <div class="modal-header">
+      <div class="modal-title"><i class="bi bi-gift"></i> Envoyer une offre</div>
+      <button class="modal-close" onclick="closeModal('modalOffre')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <form method="POST" action="/fidelite/offre">
+      <div class="modal-body">
+        <div class="form-field">
+          <label class="form-label">Nom du client *</label>
+          <div class="input-group"><i class="bi bi-person"></i><input type="text" name="client_nom" class="form-control" required placeholder="Nom complet"/></div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Téléphone</label>
+          <div class="input-group"><i class="bi bi-telephone"></i><input type="tel" name="client_telephone" class="form-control" placeholder="6XX XXX XXX"/></div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Type d'offre *</label>
+          <select name="type_offre" class="form-control form-select" required>
+            <option value="reduction">Réduction %</option>
+            <option value="livraison">Livraison gratuite</option>
+            <option value="dessert">Dessert offert</option>
+            <option value="code_promo">Code promo</option>
+            <option value="autre">Autre</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Valeur / Description</label>
+          <input type="text" name="valeur" class="form-control" placeholder="Ex: 10%, PROMO2024, Dessert au choix…"/>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Note interne</label>
+          <textarea name="note" class="form-control" rows="2" placeholder="Remarque (non visible par le client)…" style="resize:vertical"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalOffre')">Annuler</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> Envoyer l'offre</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.toggle-inline { display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600 }
+</style>
+<script src="/js/app.js"></script>
+<script>
+function openModal(id){ document.getElementById(id).style.display='flex'; }
+function closeModal(id){ document.getElementById(id).style.display='none'; }
+document.querySelectorAll('.modal-backdrop').forEach(m => m.addEventListener('click',e=>{ if(e.target===m) m.style.display='none'; }));
+</script>
+</body></html>
