@@ -1,0 +1,66 @@
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-brand">
+      <div class="brand-logo">🍽️</div>
+      <div>
+        <div class="brand-name">MenuCam</div>
+        <div class="brand-tag">Restaurant SaaS</div>
+      </div>
+    </div>
+  </div>
+  <div class="sidebar-resto">
+    <div class="sidebar-resto-name"><%= restaurantNom || 'Mon Restaurant' %></div>
+    <div class="sidebar-resto-status" id="sidebarStatut"><span class="status-dot"></span> En ligne</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-title">Principal</div>
+    <a href="/dashboard" class="nav-item <%= typeof activePage!=='undefined'&&activePage==='dashboard'?'active':'' %>">
+      <i class="bi bi-grid-1x2"></i> Dashboard
+    </a>
+    <a href="/commandes" class="nav-item <%= typeof activePage!=='undefined'&&activePage==='commandes'?'active':'' %>">
+      <i class="bi bi-bag-check"></i> Commandes
+      <% if(typeof enAttenteCount!=='undefined'&&enAttenteCount>0){%><span class="nav-badge"><%=enAttenteCount%></span><%}%>
+    </a>
+    <a href="/plats" class="nav-item <%= typeof activePage!=='undefined'&&activePage==='plats'?'active':'' %>">
+      <i class="bi bi-egg-fried"></i> Menu & Plats
+    </a>
+    <a href="/categories" class="nav-item <%= typeof activePage!=='undefined'&&activePage==='categories'?'active':'' %>">
+      <i class="bi bi-tags"></i> Catégories
+    </a>
+    <div class="nav-section-title">Gestion</div>
+    <a href="/horaires" class="nav-item <%= typeof activePage!=='undefined'&&activePage==='horaires'?'active':'' %>">
+      <i class="bi bi-clock"></i> Horaires
+    </a>
+    <a href="/livreurs" class="nav-item <%= typeof activePage!=='undefined'&&activePage==='livreurs'?'active':'' %>">
+      <i class="bi bi-scooter"></i> Livreurs
+    </a>
+    <a href="/dashboard/paiements" class="nav-item <%= typeof activePage!=='undefined'&&activePage==='paiements'?'active':'' %>">
+      <i class="bi bi-credit-card-2-front"></i> Paiements
+    </a>
+    <a href="/promos" class="nav-item <%= typeof activePage!=='undefined'&&activePage==='promos'?'active':'' %>">
+      <i class="bi bi-tag"></i> Promotions
+    </a>
+    <a href="/fidelite" class="nav-item <%= typeof activePage!=='undefined'&&activePage==='fidelite'?'active':'' %>">
+      <i class="bi bi-star-fill"></i> Fidélité
+    </a>
+    <a href="/avis" class="nav-item <%= typeof activePage!=='undefined'&&activePage==='avis'?'active':'' %>">
+      <i class="bi bi-chat-square-text"></i> Avis clients
+    </a>
+    <a href="/analytics" class="nav-item <%= typeof activePage!=='undefined'&&activePage==='analytics'?'active':'' %>">
+      <i class="bi bi-bar-chart-line"></i> Analytics
+    </a>
+    <div class="nav-section-title">Compte</div>
+    <a href="/restaurants" target="_blank" class="nav-item">
+      <i class="bi bi-globe"></i> Page publique
+    </a>
+    <a href="/dashboard/profil" class="nav-item <%= typeof activePage!=='undefined'&&activePage==='profil'?'active':'' %>">
+      <i class="bi bi-person-gear"></i> Mon profil
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="/auth/deconnexion" class="btn-logout">
+      <i class="bi bi-box-arrow-left"></i> Déconnexion
+    </a>
+  </div>
+</aside>
