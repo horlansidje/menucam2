@@ -1,0 +1,189 @@
+<%- include('../partials/head', {title:'Paiements'}) %>
+<%- include('../partials/sidebar', {activePage:'paiements', enAttenteCount:0}) %>
+<div class="main-content">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button>
+      <div class="topbar-title">Gestion des paiements</div>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Paiements</div>
+        <div class="page-subtitle">Suivi de tous vos paiements en ligne et hors-ligne</div>
+      </div>
+    </div>
+
+    <!-- Stats paiements -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem">
+      <div class="stat-card">
+        <div class="stat-card-icon" style="background:#D1FAE5;color:#059669"><i class="bi bi-check-circle-fill" style="font-size:1.3rem"></i></div>
+        <div><div class="stat-card-value" style="color:#059669"><%= confirmes %></div><div class="stat-card-label">Confirmés</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-icon" style="background:#FEF3C7;color:#D97706"><i class="bi bi-hourglass-split" style="font-size:1.3rem"></i></div>
+        <div><div class="stat-card-value" style="color:#D97706"><%= en_attente %></div><div class="stat-card-label">En attente</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-icon" style="background:#DBEAFE;color:#2563EB"><i class="bi bi-currency-dollar" style="font-size:1.3rem"></i></div>
+        <div><div class="stat-card-value"><%= ca_paye.toLocaleString('fr-FR') %></div><div class="stat-card-label">FCFA encaissés</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-icon" style="background:#F3F4F6;color:#6B7280"><i class="bi bi-chat-square" style="font-size:1.3rem"></i></div>
+        <div><div class="stat-card-value"><%= whatsapp_count %></div><div class="stat-card-label">Via WhatsApp</div></div>
+      </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-body" style="padding:.75rem 1.25rem">
+        <form method="GET" action="/paiements" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <select name="methode" class="form-control form-select" style="width:auto;min-width:160px">
+            <option value="">Toutes les méthodes</option>
+            <option value="mtn"      <%= filtre==='mtn'?'selected':''%>>📱 MTN MoMo</option>
+            <option value="orange"   <%= filtre==='orange'?'selected':''%>>🟠 Orange Money</option>
+            <option value="cinetpay" <%= filtre==='cinetpay'?'selected':''%>>🌍 CinetPay</option>
+            <option value="stripe"   <%= filtre==='stripe'?'selected':''%>>💳 Stripe</option>
+            <option value="whatsapp" <%= filtre==='whatsapp'?'selected':''%>>💬 WhatsApp</option>
+          </select>
+          <select name="statut" class="form-control form-select" style="width:auto;min-width:160px">
+            <option value="">Tous les statuts</option>
+            <option value="success" <%= filtreStatut==='success'?'selected':''%>>✅ Confirmé</option>
+            <option value="pending" <%= filtreStatut==='pending'?'selected':''%>>⏳ En attente</option>
+          </select>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Filtrer</button>
+          <a href="/paiements" class="btn btn-secondary btn-sm">Réinitialiser</a>
+        </form>
+      </div>
+    </div>
+
+    <!-- Tableau -->
+    <div class="card">
+      <div class="card-header-bar">
+        <div class="card-title">📋 Historique des paiements (<%= commandes.length %>)</div>
+      </div>
+      <% if(commandes.length === 0) { %>
+        <div class="empty-state" style="padding:2.5rem">
+          <div class="empty-state-icon"><i class="bi bi-credit-card-2-front"></i></div>
+          <h3>Aucun paiement trouvé</h3>
+          <p>Les paiements de vos clients apparaîtront ici.</p>
+        </div>
+      <% } else { %>
+      <div class="table-wrap" style="border:none;border-radius:0">
+        <table>
+          <thead>
+            <tr>
+              <th>Commande</th>
+              <th>Client</th>
+              <th>Méthode</th>
+              <th>Statut paiement</th>
+              <th>Montant</th>
+              <th>Date</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          <% commandes.forEach(cmd => {
+            const methodeLabel = {mtn:'📱 MTN MoMo', orange:'🟠 Orange Money', cinetpay:'🌍 CinetPay', stripe:'💳 Stripe', whatsapp:'💬 WhatsApp'}[cmd.paiement] || cmd.paiement;
+            const isPaid    = cmd.paiement_statut === 'success';
+            const isOnline  = ['mtn','orange','cinetpay','stripe'].includes(cmd.paiement);
+            const isPending = isOnline && !isPaid && cmd.statut !== 'annulee';
+          %>
+            <tr>
+              <td>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:13px"><%=cmd.num_commande%></div>
+                <% if(cmd.paiement_ref) { %><div style="font-size:10px;color:var(--text-tertiary);font-family:monospace">ref:<%=cmd.paiement_ref.slice(-10)%></div><% } %>
+              </td>
+              <td>
+                <div style="font-weight:600"><%=cmd.client_nom%></div>
+                <div style="font-size:12px;color:var(--text-secondary)"><%=cmd.client_telephone||'—'%></div>
+              </td>
+              <td><span style="font-size:13px"><%=methodeLabel%></span></td>
+              <td>
+                <% if(isPaid) { %>
+                  <span class="badge badge-success">✅ Confirmé</span>
+                  <% if(cmd.paiement_confirme_at) { %>
+                  <div style="font-size:11px;color:var(--text-tertiary);margin-top:2px"><%=new Date(cmd.paiement_confirme_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})%></div>
+                  <% } %>
+                <% } else if(isPending) { %>
+                  <span class="badge" style="background:#FEF3C7;color:#92400E">⏳ En attente</span>
+                  <button onclick="verifierPaiement('<%=cmd.paiement_ref%>','<%=cmd.num_commande%>',this)" class="btn btn-ghost btn-sm" style="margin-top:4px;font-size:11px;padding:2px 8px"><i class="bi bi-arrow-repeat"></i> Vérifier</button>
+                <% } else if(cmd.statut === 'annulee') { %>
+                  <span class="badge" style="background:#FEE2E2;color:#B91C1C">❌ Annulée</span>
+                <% } else { %>
+                  <span class="badge badge-gray">💬 Manuel</span>
+                <% } %>
+              </td>
+              <td style="font-weight:700;color:var(--accent)"><%=cmd.total.toLocaleString('fr-FR')%> F</td>
+              <td style="font-size:12px;color:var(--text-tertiary)"><%=new Date(cmd.createdAt).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})%></td>
+              <td>
+                <a href="/commandes/suivi/<%=cmd.num_commande%>" target="_blank" class="btn btn-ghost btn-sm btn-icon" title="Voir commande"><i class="bi bi-eye"></i></a>
+              </td>
+            </tr>
+          <% }); %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+    </div>
+
+    <!-- Guide configuration -->
+    <div class="card" style="border-left:3px solid var(--brand);background:var(--brand-pale)">
+      <div class="card-body">
+        <div style="font-weight:700;margin-bottom:.75rem"><i class="bi bi-gear" style="color:var(--brand)"></i> Configuration des paiements en ligne</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;font-size:13px">
+          <div>
+            <div style="font-weight:700;margin-bottom:4px">🌍 CinetPay (recommandé)</div>
+            <div style="color:var(--text-secondary)">Couvre MTN, Orange, Wave, Moov en une seule intégration.</div>
+            <a href="https://cinetpay.com" target="_blank" style="color:var(--brand);font-weight:600">cinetpay.com →</a>
+          </div>
+          <div>
+            <div style="font-weight:700;margin-bottom:4px">📱 MTN MoMo API</div>
+            <div style="color:var(--text-secondary)">API officielle MTN Mobile Money Developer.</div>
+            <a href="https://momodeveloper.mtn.com" target="_blank" style="color:var(--brand);font-weight:600">momodeveloper.mtn.com →</a>
+          </div>
+          <div>
+            <div style="font-weight:700;margin-bottom:4px">🟠 Orange Money</div>
+            <div style="color:var(--text-secondary)">API Orange Developer pour l'Afrique.</div>
+            <a href="https://developer.orange.com" target="_blank" style="color:var(--brand);font-weight:600">developer.orange.com →</a>
+          </div>
+          <div>
+            <div style="font-weight:700;margin-bottom:4px">💳 Stripe</div>
+            <div style="color:var(--text-secondary)">Cartes Visa/Mastercard internationales.</div>
+            <a href="https://stripe.com" target="_blank" style="color:var(--brand);font-weight:600">stripe.com →</a>
+          </div>
+        </div>
+        <div style="margin-top:1rem;padding:10px;background:rgba(255,255,255,.5);border-radius:8px;font-size:12px;color:var(--text-secondary)">
+          <i class="bi bi-file-earmark-code"></i> Ajoutez vos clés API dans le fichier <strong>.env</strong> pour activer chaque méthode de paiement.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+async function verifierPaiement(ref, num, btn) {
+  if(!ref) return showToast('Référence de paiement manquante','error');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-arrow-repeat" style="animation:spin .8s linear infinite"></i> Vérification…';
+  try {
+    const res  = await fetch(`/paiement/verifier/${ref}`);
+    const data = await res.json();
+    if (data.ok && data.statut === 'success') {
+      showToast('✅ Paiement confirmé !', 'success');
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      showToast('⏳ Paiement non encore confirmé (' + (data.statut||'en attente') + ')', '');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Vérifier';
+    }
+  } catch(e) {
+    showToast('Erreur réseau', 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Vérifier';
+  }
+}
+</script>
+</body></html>
