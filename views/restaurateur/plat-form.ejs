@@ -1,0 +1,57 @@
+<%- include('../partials/head', {title: plat?'Modifier':'Nouveau plat'}) %>
+<%- include('../partials/sidebar', {activePage:'plats'}) %>
+<div class="main-content">
+  <div class="topbar">
+    <div class="topbar-left"><button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button><div class="topbar-title"><%=plat?'Modifier le plat':'Nouveau plat'%></div></div>
+  </div>
+  <div class="page-body">
+    <a href="/plats" class="btn btn-ghost btn-sm" style="margin-bottom:1.25rem"><i class="bi bi-arrow-left"></i> Retour aux plats</a>
+    <% if(error&&error.length>0){%><div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i><%=error%></div><%}%>
+    <div class="card">
+      <div class="card-header-bar"><div class="card-title"><%=plat?'Modifier : '+plat.nom:'Ajouter un nouveau plat'%></div></div>
+      <div class="card-body">
+        <form method="POST" action="<%=plat?'/plats/'+plat._id+'/modifier':'/plats/nouveau'%>" enctype="multipart/form-data">
+          <div style="display:grid;grid-template-columns:260px 1fr;gap:2rem">
+            <div>
+              <label class="form-label">Photo du plat</label>
+              <div class="photo-upload-zone" id="photoZone">
+                <% if(plat&&plat.photo){%><img src="<%=plat.photo%>" class="preview" style="width:100%;height:100%;object-fit:cover"/><%}else{%>
+                <div class="upload-placeholder" style="display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--text-tertiary)">
+                  <i class="bi bi-camera" style="font-size:2rem"></i>
+                  <span style="font-size:13px;text-align:center">Cliquez ou glissez une photo</span>
+                  <span style="font-size:11px">JPG, PNG · Max 5 Mo</span>
+                </div>
+                <%}%>
+                <input type="file" name="photo" accept="image/*" style="display:none"/>
+              </div>
+              <div style="margin-top:1.25rem">
+                <label class="form-label">Disponibilité</label>
+                <div class="toggle-wrap">
+                  <span style="font-size:13px;color:var(--text-secondary)">Disponible au menu</span>
+                  <label class="toggle"><input type="checkbox" name="disponible" <%=!plat||plat.disponible?'checked':''%>/><span class="toggle-slider"></span></label>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div style="margin-bottom:1rem"><label class="form-label">Nom du plat *</label><input type="text" name="nom" class="form-control" value="<%=plat?plat.nom:''%>" placeholder="Ex: Ndolé spécial, Poulet DG..." required/></div>
+              <div style="margin-bottom:1rem"><label class="form-label">Description</label><textarea name="description" class="form-control" rows="3" placeholder="Ingrédients, spécialités, allergènes..."><%=plat?plat.description:''%></textarea></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+                <div><label class="form-label">Prix (FCFA) *</label><input type="number" name="prix" class="form-control" value="<%=plat?plat.prix:''%>" placeholder="3500" min="0" step="50" required/></div>
+                <div><label class="form-label">Catégorie *</label>
+                  <input type="text" name="categorie" class="form-control" value="<%=plat?plat.categorie:''%>" placeholder="Plats principaux, Boissons..." list="cats-list" required/>
+                  <datalist id="cats-list"><option value="Entrées & Collations"/><option value="Plats principaux"/><option value="Grillades & Brochettes"/><option value="Poissons"/><option value="Végétarien"/><option value="Accompagnements"/><option value="Desserts"/><option value="Jus naturels"/><option value="Boissons"/><option value="Bières"/></datalist>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border)">
+            <a href="/plats" class="btn btn-secondary">Annuler</a>
+            <button type="submit" class="btn btn-primary"><i class="bi <%=plat?'bi-floppy':'bi-plus-lg'%>"></i> <%=plat?'Enregistrer':'Ajouter le plat'%></button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/app.js"></script>
+</body></html>
