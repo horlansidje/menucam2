@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no"/>
+  <title>Espace Livreur — <%= livreur.nom %></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="/css/leaflet-custom.css"/>
+  <meta name="theme-color" content="#0f172a"/>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Bricolage+Grotesque:wght@700;800&display=swap');
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Plus Jakarta Sans',sans-serif;background:#F3F4F6;-webkit-font-smoothing:antialiased;padding-bottom:80px}
+
+    /* ── Top bar ── */
+    .topbar{background:#0f172a;padding:1rem 1.25rem;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between}
+    .tb-brand{display:flex;align-items:center;gap:10px}
+    .tb-icon{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#F59E0B,#D97706);display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+    .tb-name{font-family:'Bricolage Grotesque',sans-serif;font-size:1rem;font-weight:800;color:#fff}
+    .tb-sub{font-size:11px;color:rgba(255,255,255,.45)}
+    .tb-right{display:flex;align-items:center;gap:8px}
+    .btn-logout{display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border:none;cursor:pointer;font-size:13px;font-family:inherit;transition:all .2s}
+    .btn-logout:hover{background:rgba(239,68,68,.2);color:#FCA5A5}
+
+    /* ── Statut badge header ── */
+    .statut-header{padding:.75rem 1.25rem;background:#fff;border-bottom:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between}
+    .statut-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:700}
+    .statut-pill.dispo{background:#D1FAE5;color:#065F46}
+    .statut-pill.occupe{background:#FEF3C7;color:#92400E}
+    .statut-pill.inactif{background:#F3F4F6;color:#6B7280}
+    .statut-dot{width:7px;height:7px;border-radius:50%}
+    .statut-dot.dispo{background:#10B981;animation:pulse 1.5s infinite}
+    .statut-dot.occupe{background:#F59E0B}
+    .statut-dot.inactif{background:#9CA3AF}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+    /* ── Stats bar ── */
+    .stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#E5E7EB;margin-bottom:1rem}
+    .stat-item{background:#fff;padding:.75rem .5rem;text-align:center}
+    .stat-val{font-family:'Bricolage Grotesque',sans-serif;font-size:1.4rem;font-weight:800;color:#111;line-height:1}
+    .stat-label{font-size:11px;color:#6B7280;margin-top:3px;font-weight:500}
+
+    /* ── Section title ── */
+    .section-title{font-family:'Bricolage Grotesque',sans-serif;font-size:.95rem;font-weight:800;color:#374151;padding:.75rem 1.25rem .5rem;display:flex;align-items:center;gap:7px}
+
+    /* ── Commande card ── */
+    .cmd-card{background:#fff;border-radius:16px;margin:0 1rem .75rem;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);border:1px solid #E5E7EB}
+    .cmd-card.urgent{border-color:#F59E0B;box-shadow:0 2px 8px rgba(245,158,11,.2)}
+    .cmd-card-top{padding:1rem;border-bottom:1px solid #F3F4F6;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+    .cmd-num{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:15px;color:#111}
+    .cmd-time{font-size:11px;color:#9CA3AF;margin-top:2px}
+    .cmd-body{padding:1rem}
+    .cmd-client-name{font-weight:700;font-size:15px;color:#111;margin-bottom:4px}
+    .cmd-info-row{display:flex;align-items:center;gap:7px;font-size:13px;color:#6B7280;margin-bottom:3px}
+    .cmd-items-summary{background:#F9FAFB;border-radius:8px;padding:10px 12px;font-size:13px;color:#374151;margin-top:8px}
+    .cmd-item-line{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #F3F4F6}
+    .cmd-item-line:last-child{border:none}
+    .cmd-total-line{display:flex;justify-content:space-between;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:15px;padding-top:8px;border-top:2px solid #E5E7EB;margin-top:4px;color:#F59E0B}
+    .cmd-actions{padding:.75rem 1rem;background:#F9FAFB;border-top:1px solid #F3F4F6;display:flex;gap:8px}
+    .btn-action{flex:1;padding:12px;border-radius:12px;border:none;cursor:pointer;font-weight:700;font-size:14px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s}
+    .btn-enroute{background:#8B5CF6;color:#fff;box-shadow:0 4px 12px rgba(139,92,246,.35)}
+    .btn-enroute:hover{background:#7C3AED}
+    .btn-livre{background:#10B981;color:#fff;box-shadow:0 4px 12px rgba(16,185,129,.35)}
+    .btn-livre:hover{background:#059669}
+    .btn-call{background:#F3F4F6;color:#374151;border:1px solid #E5E7EB}
+    .btn-call:hover{background:#E5E7EB}
+    .btn-map-link{background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE}
+    .btn-map-link:hover{background:#DBEAFE}
+
+    /* ── Carte livreur ── */
+    .map-section{margin:0 1rem .75rem;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #E5E7EB;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+    .map-header{padding:.85rem 1rem;border-bottom:1px solid #F3F4F6;display:flex;align-items:center;justify-content:space-between}
+    .map-header-title{font-weight:700;font-size:14px;display:flex;align-items:center;gap:7px;color:#111}
+    #livreurMap{height:300px}
+    .btn-refresh-map{background:none;border:1px solid #E5E7EB;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit;color:#6B7280;display:flex;align-items:center;gap:5px}
+    .btn-refresh-map:hover{background:#F3F4F6}
+
+    /* ── Historique ── */
+    .history-item{display:flex;align-items:center;gap:10px;padding:.75rem 1.25rem;border-bottom:1px solid #F3F4F6}
+    .history-item:last-child{border:none}
+    .history-icon{width:36px;height:36px;border-radius:50%;background:#D1FAE5;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+    .history-num{font-weight:700;font-size:13px;color:#111}
+    .history-detail{font-size:12px;color:#6B7280}
+    .history-total{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;color:#10B981;margin-left:auto;font-size:14px}
+
+    /* ── Empty ── */
+    .empty-box{text-align:center;padding:3rem 1.5rem;color:#9CA3AF}
+    .empty-icon{font-size:3rem;margin-bottom:.75rem;display:block}
+
+    /* ── Bottom nav ── */
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #E5E7EB;display:flex;z-index:100;box-shadow:0 -4px 16px rgba(0,0,0,0.08)}
+    .bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:.6rem .5rem;cursor:pointer;transition:color .2s;color:#9CA3AF;border:none;background:none;font-family:inherit}
+    .bnav-item.active{color:#F59E0B}
+    .bnav-item i{font-size:1.3rem}
+    .bnav-label{font-size:10px;font-weight:600}
+    .bnav-badge{position:absolute;top:4px;right:calc(50% - 20px);background:#EF4444;color:#fff;font-size:9px;font-weight:800;min-width:16px;height:16px;border-radius:8px;padding:0 3px;display:flex;align-items:center;justify-content:center}
+
+    /* ── Sections tabs ── */
+    .tab-section{display:none}
+    .tab-section.active{display:block}
+  </style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="tb-brand">
+    <div class="tb-icon">🛵</div>
+    <div>
+      <div class="tb-name"><%= livreur.nom %></div>
+      <div class="tb-sub"><%= restaurant ? restaurant.nom : 'Restaurant' %></div>
+    </div>
+  </div>
+  <div class="tb-right">
+    <a href="/livreur/logout" class="btn-logout"><i class="bi bi-box-arrow-left"></i> Quitter</a>
+  </div>
+</div>
+
+<!-- Statut livreur -->
+<div class="statut-header">
+  <div>
+    <div class="statut-pill <%= livreur.statut==='disponible'?'dispo':livreur.statut==='occupé'?'occupe':'inactif' %>">
+      <span class="statut-dot <%= livreur.statut==='disponible'?'dispo':livreur.statut==='occupé'?'occupe':'inactif' %>"></span>
+      <%= livreur.statut==='disponible'?'Disponible':livreur.statut==='occupé'?'En livraison':'Inactif' %>
+    </div>
+  </div>
+  <div style="font-size:13px;color:#6B7280"><i class="bi bi-telephone"></i> <%= livreur.telephone %></div>
+</div>
+
+<!-- Stats bar -->
+<div class="stats-bar">
+  <div class="stat-item">
+    <div class="stat-val"><%= stats.enCours %></div>
+    <div class="stat-label">En cours</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-val"><%= stats.enAttente %></div>
+    <div class="stat-label">À prendre</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-val"><%= stats.livreesJour %></div>
+    <div class="stat-label">Livrées auj.</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-val" style="font-size:1rem"><%= stats.caJour.toLocaleString('fr-FR') %></div>
+    <div class="stat-label">FCFA livrés</div>
+  </div>
+</div>
+
+<!-- ── SECTION COMMANDES ── -->
+<div class="tab-section active" id="tabCommandes">
+  <div class="section-title">
+    <i class="bi bi-bag-check"></i> Mes commandes
+    <% if(commandes.length>0){%><span style="background:#EF4444;color:#fff;font-size:11px;padding:2px 8px;border-radius:999px;margin-left:4px"><%=commandes.length%></span><%}%>
+  </div>
+
+  <% if(commandes.length===0){ %>
+    <div class="empty-box">
+      <span class="empty-icon">🛵</span>
+      <div style="font-weight:700;font-size:15px;color:#374151;margin-bottom:.5rem">Aucune commande en cours</div>
+      <div style="font-size:13px">Vous recevrez vos commandes ici dès qu'elles vous seront assignées.</div>
+    </div>
+  <% } else { %>
+    <% commandes.forEach(cmd => { %>
+      <div class="cmd-card <%= cmd.statut==='en_preparation'?'urgent':'' %>" id="cmd-<%=cmd._id%>">
+        <div class="cmd-card-top">
+          <div>
+            <div class="cmd-num"><%= cmd.num_commande %></div>
+            <div class="cmd-time"><i class="bi bi-clock"></i> <%= new Date(cmd.createdAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) %></div>
+          </div>
+          <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;background:<%= cmd.statut==='en_livraison'?'#EDE9FE':'#FEF3C7' %>;color:<%= cmd.statut==='en_livraison'?'#6D28D9':'#92400E' %>">
+            <%= cmd.statut==='en_livraison'?'🛵 En route':'⏳ À prendre en charge' %>
+          </span>
+        </div>
+        <div class="cmd-body">
+          <div class="cmd-client-name"><%= cmd.client_nom %></div>
+          <% if(cmd.client_telephone){ %>
+            <div class="cmd-info-row"><i class="bi bi-telephone"></i> <%= cmd.client_telephone %></div>
+          <% } %>
+          <% if(cmd.client_adresse){ %>
+            <div class="cmd-info-row"><i class="bi bi-geo-alt"></i> <%= cmd.client_adresse %><% if(cmd.client_quartier){ %>, <%= cmd.client_quartier %><% } %></div>
+          <% } %>
+          <% if(cmd.note){ %>
+            <div class="cmd-info-row" style="color:#D97706"><i class="bi bi-chat-text"></i> <%= cmd.note %></div>
+          <% } %>
+          <div class="cmd-items-summary">
+            <% cmd.items.forEach(item => { %>
+              <div class="cmd-item-line">
+                <span><strong><%= item.quantite %>×</strong> <%= item.nom %></span>
+                <span style="color:#6B7280"><%= (item.prix*item.quantite).toLocaleString('fr-FR') %> F</span>
+              </div>
+            <% }); %>
+            <div class="cmd-total-line"><span>Total</span><span><%= cmd.total.toLocaleString('fr-FR') %> FCFA</span></div>
+          </div>
+        </div>
+        <div class="cmd-actions">
+          <% if(cmd.client_telephone){ %>
+            <a href="tel:<%= cmd.client_telephone %>" class="btn-action btn-call" style="flex:0;padding:12px 14px"><i class="bi bi-telephone"></i></a>
+          <% } %>
+          <% if(cmd.client_adresse){ %>
+            <a href="https://www.google.com/maps/search/<%=encodeURIComponent(cmd.client_adresse+' '+cmd.client_quartier+' Douala Cameroun')%>" target="_blank" class="btn-action btn-map-link" style="flex:0;padding:12px 14px"><i class="bi bi-map"></i></a>
+          <% } %>
+          <% if(cmd.statut==='en_preparation'){ %>
+            <button onclick="updateStatut('<%=cmd._id%>','en_livraison',this)" class="btn-action btn-enroute">
+              <i class="bi bi-scooter"></i> Partir en livraison
+            </button>
+          <% } else if(cmd.statut==='en_livraison'){ %>
+            <button onclick="updateStatut('<%=cmd._id%>','livree',this)" class="btn-action btn-livre">
+              <i class="bi bi-check-circle"></i> Marquer comme livrée
+            </button>
+          <% } %>
+        </div>
+      </div>
+    <% }); %>
+  <% } %>
+</div>
+
+<!-- ── SECTION CARTE ── -->
+<div class="tab-section" id="tabCarte">
+  <div class="section-title"><i class="bi bi-map"></i> Mes livraisons sur la carte</div>
+  <div class="map-section">
+    <div class="map-header">
+      <div class="map-header-title"><i class="bi bi-map"></i> Carte en temps réel</div>
+      <button class="btn-refresh-map" onclick="initLivreurMap()"><i class="bi bi-arrow-clockwise"></i> Actualiser</button>
+    </div>
+    <div id="livreurMap"></div>
+    <div style="padding:.75rem 1rem">
+      <div id="mapGpsBadge" class="gps-badge loading"><i class="bi bi-arrow-repeat"></i> Détection GPS...</div>
+    </div>
+  </div>
+  <div style="margin:0 1rem">
+    <div style="font-size:13px;color:#6B7280;background:#F9FAFB;border-radius:10px;padding:10px 12px;border:1px solid #E5E7EB">
+      <i class="bi bi-info-circle" style="color:#3B82F6"></i>
+      La carte affiche vos commandes à livrer et votre position GPS actuelle.
+      Cliquez sur un marqueur pour voir les détails.
+    </div>
+  </div>
+</div>
+
+<!-- ── SECTION HISTORIQUE ── -->
+<div class="tab-section" id="tabHistorique">
+  <div class="section-title"><i class="bi bi-clock-history"></i> Historique du jour</div>
+  <div style="background:#fff;border-radius:16px;margin:0 1rem;overflow:hidden;border:1px solid #E5E7EB;box-shadow:0 2px 8px rgba(0,0,0,0.06)">
+    <% if(historique.length===0){ %>
+      <div class="empty-box" style="padding:2rem">
+        <span class="empty-icon" style="font-size:2rem">📋</span>
+        <div style="font-size:13px">Aucune livraison aujourd'hui.</div>
+      </div>
+    <% } else { %>
+      <% historique.forEach(cmd => { %>
+        <div class="history-item">
+          <div class="history-icon">✅</div>
+          <div style="flex:1;min-width:0">
+            <div class="history-num"><%= cmd.num_commande %></div>
+            <div class="history-detail"><%= cmd.client_nom %> · <%= new Date(cmd.updatedAt||cmd.createdAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) %></div>
+            <% if(cmd.client_adresse){ %><div class="history-detail"><i class="bi bi-geo-alt"></i> <%= cmd.client_adresse %></div><% } %>
+          </div>
+          <div class="history-total"><%= cmd.total.toLocaleString('fr-FR') %> F</div>
+        </div>
+      <% }); %>
+      <div style="padding:.75rem 1.25rem;background:#F9FAFB;border-top:1px solid #E5E7EB;display:flex;justify-content:space-between;font-weight:700;font-size:14px">
+        <span style="color:#6B7280"><%= historique.length %> livraison(s)</span>
+        <span style="color:#10B981;font-family:'Bricolage Grotesque',sans-serif"><%= stats.caJour.toLocaleString('fr-FR') %> FCFA</span>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<!-- Bottom navigation -->
+<nav class="bottom-nav">
+  <button class="bnav-item active" id="btnTabCommandes" onclick="showTab('Commandes')" style="position:relative">
+    <i class="bi bi-bag-check"></i>
+    <span class="bnav-label">Commandes</span>
+    <% if(commandes.length>0){ %><span class="bnav-badge"><%=commandes.length%></span><% } %>
+  </button>
+  <button class="bnav-item" id="btnTabCarte" onclick="showTab('Carte')">
+    <i class="bi bi-map"></i>
+    <span class="bnav-label">Carte</span>
+  </button>
+  <button class="bnav-item" id="btnTabHistorique" onclick="showTab('Historique')">
+    <i class="bi bi-clock-history"></i>
+    <span class="bnav-label">Historique</span>
+  </button>
+</nav>
+
+<!-- Leaflet + Socket.io -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// ── Données du livreur ──────────────────────────────────────
+const LIVREUR_ID   = '<%= livreur._id %>';
+const LIVREUR_NOM  = '<%= livreur.nom %>';
+const RESTAURANT_LAT = <%- JSON.stringify(restaurant && restaurant.lat ? restaurant.lat : 4.0511) %>;
+const RESTAURANT_LNG = <%- JSON.stringify(restaurant && restaurant.lng ? restaurant.lng : 9.7034) %>;
+const RESTAURANT_NOM = '<%- restaurant ? restaurant.nom.replace(/'/g,"\\'") : "Restaurant" %>';
+const COMMANDES = <%- JSON.stringify(commandes) %>;
+
+// ── Navigation onglets ──────────────────────────────────────
+function showTab(tab) {
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.bnav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab'+tab).classList.add('active');
+  document.getElementById('btnTab'+tab).classList.add('active');
+  if (tab === 'Carte') {
+    setTimeout(initLivreurMap, 100);
+  }
+}
+
+// ── Mise à jour statut ──────────────────────────────────────
+async function updateStatut(cmdId, statut, btn) {
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+  const originalHTML = btn.innerHTML;
+  btn.innerHTML = '<i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite"></i> ...';
+
+  try {
+    const res = await fetch(`/livreur/commande/${cmdId}/statut`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ statut })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      if (statut === 'livree') {
+        // Supprimer la carte et recharger
+        const card = document.getElementById('cmd-' + cmdId);
+        if (card) {
+          card.style.transition = 'all 0.4s';
+          card.style.opacity = '0';
+          card.style.transform = 'translateX(100%)';
+          setTimeout(() => { card.remove(); checkEmpty(); }, 400);
+        }
+        // Mettre à jour le badge de stats
+        showToastLivreur('✅ Commande livrée ! Bien joué 🎉', 'success');
+      } else if (statut === 'en_livraison') {
+        // Mettre à jour le bouton
+        btn.innerHTML = '<i class="bi bi-check-circle"></i> Marquer comme livrée';
+        btn.className = 'btn-action btn-livre';
+        btn.onclick = () => updateStatut(cmdId, 'livree', btn);
+        // Mettre à jour le badge statut
+        const card = document.getElementById('cmd-' + cmdId);
+        if (card) {
+          const badge = card.querySelector('[style*="EDE9FE"], [style*="FEF3C7"]');
+          if (badge) { badge.style.background = '#EDE9FE'; badge.style.color = '#6D28D9'; badge.textContent = '🛵 En route'; }
+        }
+        showToastLivreur('🛵 Livraison démarrée !', 'info');
+      }
+    } else {
+      showToastLivreur('❌ Erreur : ' + (data.message || 'Réessayez'), 'error');
+      btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = originalHTML;
+    }
+  } catch(e) {
+    showToastLivreur('❌ Erreur réseau', 'error');
+    btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = originalHTML;
+  }
+}
+
+function checkEmpty() {
+  const list = document.getElementById('tabCommandes');
+  const remaining = list.querySelectorAll('.cmd-card');
+  if (remaining.length === 0) {
+    const title = list.querySelector('.section-title');
+    if (title) title.insertAdjacentHTML('afterend', `
+      <div class="empty-box"><span class="empty-icon">🎉</span>
+      <div style="font-weight:700;font-size:15px;color:#374151;margin-bottom:.5rem">Toutes livrées !</div>
+      <div style="font-size:13px">Excellent travail aujourd'hui.</div></div>`);
+    // Badge
+    const badge = document.querySelector('.bnav-badge');
+    if (badge) badge.remove();
+  }
+}
+
+// ── Toast simple ────────────────────────────────────────────
+function showToastLivreur(msg, type='info') {
+  const colors = { success:'#10B981', error:'#EF4444', info:'#3B82F6' };
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;top:80px;left:50%;transform:translateX(-50%);background:${colors[type]||'#374151'};color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.2);white-space:nowrap;font-family:inherit;transition:all .3s;opacity:0`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => { t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)'; });
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3500);
+}
+
+// ── Carte livreur ───────────────────────────────────────────
+let livreurMap = null;
+let myPositionMarker = null;
+
+function initLivreurMap() {
+  const el = document.getElementById('livreurMap');
+  if (!el) return;
+
+  if (!livreurMap) {
+    livreurMap = L.map('livreurMap', { zoomControl: true, scrollWheelZoom: false })
+      .setView([RESTAURANT_LAT, RESTAURANT_LNG], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap', maxZoom: 19,
+    }).addTo(livreurMap);
+  }
+
+  // Marqueur restaurant
+  const restoIcon = L.divIcon({
+    className: '',
+    html: `<div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#1B4332,#2D6A4F);border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 12px rgba(27,67,50,.4)">🍽️</div>`,
+    iconSize:[40,40], iconAnchor:[20,20], popupAnchor:[0,-22],
+  });
+  L.marker([RESTAURANT_LAT, RESTAURANT_LNG], { icon: restoIcon })
+    .addTo(livreurMap)
+    .bindPopup(`<div class="map-popup"><div class="map-popup-title">${RESTAURANT_NOM}</div><div class="map-popup-row">Point de départ</div></div>`);
+
+  // Marqueurs commandes
+  const bounds = [[RESTAURANT_LAT, RESTAURANT_LNG]];
+  COMMANDES.forEach(cmd => {
+    if (!cmd.lat && !cmd.lng) return;
+    const lat = cmd.lat || 4.0511, lng = cmd.lng || 9.7034;
+    bounds.push([lat, lng]);
+    const cmdIcon = L.divIcon({
+      className: '',
+      html: `<div style="width:36px;height:36px;border-radius:50%;background:${cmd.statut==='en_livraison'?'#8B5CF6':'#F59E0B'};border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.25)">${cmd.statut==='en_livraison'?'🛵':'📦'}</div>`,
+      iconSize:[36,36], iconAnchor:[18,18], popupAnchor:[0,-20],
+    });
+    L.marker([lat, lng], { icon: cmdIcon })
+      .addTo(livreurMap)
+      .bindPopup(`
+        <div class="map-popup">
+          <div class="map-popup-title">${cmd.num_commande}</div>
+          <div class="map-popup-row"><strong>${cmd.client_nom}</strong></div>
+          ${cmd.client_telephone ? `<div class="map-popup-row"><a href="tel:${cmd.client_telephone}" style="color:#F59E0B;font-weight:600">📞 ${cmd.client_telephone}</a></div>` : ''}
+          ${cmd.client_adresse ? `<div class="map-popup-row">📍 ${cmd.client_adresse}${cmd.client_quartier?', '+cmd.client_quartier:''}</div>` : ''}
+          <div class="map-popup-total">${(cmd.total||0).toLocaleString('fr-FR')} FCFA</div>
+        </div>`);
+    // Ligne restaurant → client
+    L.polyline([[RESTAURANT_LAT, RESTAURANT_LNG], [lat, lng]], {
+      color: cmd.statut==='en_livraison'?'#8B5CF6':'#F59E0B', weight:2.5, opacity:.6,
+      dashArray: cmd.statut==='en_livraison'?null:'6,5',
+    }).addTo(livreurMap);
+  });
+
+  // Détecter position GPS du livreur
+  const badge = document.getElementById('mapGpsBadge');
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude, longitude } = pos.coords;
+      bounds.push([latitude, longitude]);
+      const myIcon = L.divIcon({
+        className: '',
+        html: `<div style="width:42px;height:42px;border-radius:50%;background:#3B82F6;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 14px rgba(59,130,246,.5)" class="pulse-marker">🛵</div>`,
+        iconSize:[42,42], iconAnchor:[21,21], popupAnchor:[0,-23],
+      });
+      if (myPositionMarker) livreurMap.removeLayer(myPositionMarker);
+      myPositionMarker = L.marker([latitude, longitude], { icon: myIcon })
+        .addTo(livreurMap)
+        .bindPopup(`<div class="map-popup"><div class="map-popup-title">📍 Votre position</div><div class="map-popup-row">${LIVREUR_NOM}</div></div>`);
+      if (badge) { badge.className = 'gps-badge'; badge.innerHTML = '✅ Position détectée'; }
+    }, () => {
+      if (badge) { badge.className = 'gps-badge error'; badge.innerHTML = '❌ GPS indisponible'; }
+    }, { enableHighAccuracy: true, timeout: 8000 });
+  }
+
+  if (bounds.length > 1) livreurMap.fitBounds(bounds, { padding:[30,30], maxZoom:15 });
+}
+
+// ── Socket.io — mises à jour temps réel ────────────────────
+const socket = io();
+socket.on('statut_commande', data => {
+  if (data.statut === 'annulee') {
+    const card = document.getElementById('cmd-' + data.commande_id);
+    if (card) { card.style.opacity = '0'; setTimeout(() => { card.remove(); checkEmpty(); }, 400); }
+    showToastLivreur('⚠️ Une commande a été annulée', 'error');
+  }
+});
+
+// CSS animation spin
+const s = document.createElement('style');
+s.textContent = '@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+document.head.appendChild(s);
+</script>
+</body></html>
