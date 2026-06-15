@@ -1,0 +1,25 @@
+<nav class="navbar">
+  <div class="navbar-brand">
+    <a href="/dashboard" class="brand-link">
+      <span class="brand-icon">🍽️</span>
+      <span class="brand-name">MenuCam</span>
+    </a>
+  </div>
+  <div class="navbar-menu" id="navMenu">
+    <a href="/dashboard"  class="nav-link <%= typeof activePage!=='undefined'&&activePage==='dashboard'  ?'active':'' %>">🏠 Dashboard</a>
+    <a href="/plats"      class="nav-link <%= typeof activePage!=='undefined'&&activePage==='plats'      ?'active':'' %>">🍽️ Menu</a>
+    <a href="/commandes"  class="nav-link <%= typeof activePage!=='undefined'&&activePage==='commandes'  ?'active':'' %>">
+      📦 Commandes
+      <% if(typeof stats!=='undefined'&&stats&&stats.enAttente>0){%><span class="badge-count"><%=stats.enAttente%></span><%}%>
+    </a>
+    <a href="/livreurs"   class="nav-link <%= typeof activePage!=='undefined'&&activePage==='livreurs'   ?'active':'' %>">🛵 Livreurs</a>
+    <a href="/promos"     class="nav-link <%= typeof activePage!=='undefined'&&activePage==='promos'     ?'active':'' %>">🎁 Promos</a>
+    <a href="/avis"       class="nav-link <%= typeof activePage!=='undefined'&&activePage==='avis'       ?'active':'' %>">⭐ Avis</a>
+    <a href="/analytics"  class="nav-link <%= typeof activePage!=='undefined'&&activePage==='analytics'  ?'active':'' %>">📊 Analytics</a>
+  </div>
+  <div class="navbar-right">
+    <span class="resto-name"><%= restaurantNom||'' %></span>
+    <a href="/auth/deconnexion" class="btn-logout">Déconnexion</a>
+  </div>
+  <button class="nav-toggle" id="navToggle"><span></span><span></span><span></span></button>
+</nav>
