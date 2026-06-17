@@ -319,7 +319,6 @@ async function payer() {
   showLoading('Initialisation du paiement…');
 
   try {
-    // Préparer body
     const body = { num_commande: NUM_COMMANDE, methode: selectedMethod };
     if (selectedMethod === 'mtn')    body.telephone = document.getElementById('mtnPhone')?.value;
     if (selectedMethod === 'orange') body.telephone = document.getElementById('orangePhone')?.value;
@@ -332,22 +331,26 @@ async function payer() {
 
     if (!data.ok) { showToast('❌ ' + (data.message || 'Erreur paiement'), 'error'); btn.disabled = false; return; }
 
-    // Traitement selon méthode
+    // ── Mode simulation : ouvrir la modale USSD ──────────
+    if (data.simulation && ['mtn','orange','cinetpay'].includes(selectedMethod)) {
+      const telephone = body.telephone || '';
+      const montant   = '<%= commande.total %>';
+      ouvrirSimModal(selectedMethod, data.paiement_ref, montant, telephone);
+      return; // ne pas réactiver le bouton — la modale prend le relais
+    }
+
+    // ── Mode réel ────────────────────────────────────────
     if (data.payment_url) {
-      // CinetPay, Orange → redirection
       showLoading('Redirection vers la page de paiement…');
       window.location.href = data.payment_url;
     } else if (selectedMethod === 'mtn') {
-      // MTN → demande envoyée, on attend confirmation
       showToast('📱 Demande envoyée ! Validez sur votre téléphone MTN.', 'success', 8000);
       btn.disabled = false;
-      demarrerPolling(data.reference_id || NUM_COMMANDE);
+      demarrerPolling(data.paiement_ref || NUM_COMMANDE);
     } else if (selectedMethod === 'stripe') {
-      // Stripe → redirection Checkout
       showLoading('Redirection vers le paiement sécurisé…');
       if (data.payment_url) window.location.href = data.payment_url;
     } else if (selectedMethod === 'whatsapp' && data.lien) {
-      // WhatsApp → ouvrir dans un nouvel onglet
       window.open(data.lien, '_blank');
       setTimeout(() => window.location.href = `/commandes/suivi/${NUM_COMMANDE}`, 1500);
     }
@@ -481,55 +484,6 @@ async function simConfirmer(succes) {
           onclick="document.getElementById('simModal').classList.remove('open');
                    document.getElementById('btnPayer').disabled=false;">Fermer</button>`;
     }
-  }
-}
-
-// Surcharge de payer() pour les méthodes simulées
-const _payerOriginal = payer;
-async function payer() {
-  if (!SIM_MODE || !selectedMethod || !['mtn','orange','cinetpay'].includes(selectedMethod)) {
-    return _payerOriginal();
-  }
-
-  // Mode simulation : on initie, puis on ouvre la modale
-  const btn = document.getElementById('btnPayer');
-  btn.disabled = true;
-  showLoading('Initialisation du paiement…');
-
-  try {
-    const telephone =
-      selectedMethod === 'mtn'    ? document.getElementById('mtnPhone')?.value :
-      selectedMethod === 'orange' ? document.getElementById('orangePhone')?.value : '';
-
-    const body = { num_commande: NUM_COMMANDE, methode: selectedMethod, telephone };
-    const res  = await fetch('/paiement/initier', {
-      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    hideLoading();
-
-    if (!data.ok) {
-      showToast('❌ ' + (data.message || 'Erreur'), 'error');
-      btn.disabled = false;
-      return;
-    }
-
-    // Récupérer la référence stockée en base
-    const cmdRes  = await fetch(`/paiement/verifier/${NUM_COMMANDE}_ref_check`).catch(() => null);
-    // On utilise le num_commande comme clé pour retrouver la ref
-    // La ref est dans paiement_ref de la commande — on la lit via un polling minimal
-    // Plutôt : on re-fetch depuis /commandes/suivi pour récupérer la ref
-    // Simplifié : on passe la ref que le backend a renvoyé dans la réponse
-    // (on s'assure que la route /initier retourne paiement_ref)
-    const montant = document.querySelector('.amount-value')?.textContent?.replace(/\s/g,'').replace('FCFA','') || '0';
-    const tel = telephone || '';
-
-    ouvrirSimModal(selectedMethod, data.paiement_ref || NUM_COMMANDE, montant.replace(/\D/g,''), tel);
-
-  } catch (err) {
-    hideLoading();
-    showToast('❌ Erreur réseau', 'error');
-    btn.disabled = false;
   }
 }
 
