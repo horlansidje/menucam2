@@ -1,14 +1,17 @@
 /**
  * Routes de paiement — MenuCam
  * Gère : CinetPay, MTN MoMo, Orange Money, Stripe, WhatsApp
+ * + Mode SIMULATION pour démonstration sans API réelles
  */
 const express = require('express');
 const router  = express.Router();
 const db      = require('../models/db');
 const paiement = require('../services/paiement');
+const sim      = require('../services/paiement-simulation');
 
 // ── Helpers ──────────────────────────────────────────────
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+const estSimulation = () => sim.estActif();
 
 // ─────────────────────────────────────────────────────────
 //  PAGE CAISSE — affichée après validation du panier
@@ -30,6 +33,7 @@ router.get('/:num', async (req, res) => {
       commande, restaurant,
       stripe_pk: paiement.stripe.publishableKey(),
       APP_URL:   process.env.APP_URL || '',
+      sim_mode:  estSimulation(),
     });
   } catch (err) { console.error(err); res.redirect('/'); }
 });
@@ -53,39 +57,73 @@ router.post('/initier', async (req, res) => {
 
       // ── CinetPay (MTN, Orange, Wave, Moov via CinetPay) ──
       case 'cinetpay':
-        result = await paiement.cinetpay.initierPaiement({
-          transaction_id:   ref_id,
-          montant:          commande.total,
-          description:      `Commande ${num_commande} — ${restaurant.nom}`,
-          client_nom:       commande.client_nom,
-          client_email:     commande.client_email || '',
-          client_telephone: commande.client_telephone || '',
-          metadata: { num_commande, restaurant_id: commande.restaurant_id },
-        });
+        if (estSimulation()) {
+          result = await sim.cinetpaySim.initierPaiement({
+            transaction_id:   ref_id,
+            montant:          commande.total,
+            description:      `Commande ${num_commande} — ${restaurant.nom}`,
+            client_nom:       commande.client_nom,
+            client_email:     commande.client_email || '',
+            client_telephone: commande.client_telephone || '',
+            metadata: { num_commande, restaurant_id: commande.restaurant_id },
+          });
+          result.simulation = true;
+        } else {
+          result = await paiement.cinetpay.initierPaiement({
+            transaction_id:   ref_id,
+            montant:          commande.total,
+            description:      `Commande ${num_commande} — ${restaurant.nom}`,
+            client_nom:       commande.client_nom,
+            client_email:     commande.client_email || '',
+            client_telephone: commande.client_telephone || '',
+            metadata: { num_commande, restaurant_id: commande.restaurant_id },
+          });
+        }
         break;
 
-      // ── MTN MoMo direct ──────────────────────────────────
+      // ── MTN MoMo direct (ou simulation) ──────────────────
       case 'mtn': {
-        const tel = (commande.client_telephone || '').replace(/[^0-9]/g, '');
-        result = await paiement.mtn.requestToPay({
-          reference_id: ref_id,
-          montant:      commande.total,
-          telephone:    tel,
-          description:  `Commande ${num_commande}`,
-        });
-        // Polling sera fait depuis le frontend
+        const tel = (req.body.telephone || commande.client_telephone || '').replace(/[^0-9]/g, '');
+        if (estSimulation()) {
+          result = await sim.mtnSim.requestToPay({
+            reference_id: ref_id,
+            montant:      commande.total,
+            telephone:    tel,
+            description:  `Commande ${num_commande}`,
+          });
+          result.simulation = true;
+        } else {
+          result = await paiement.mtn.requestToPay({
+            reference_id: ref_id,
+            montant:      commande.total,
+            telephone:    tel,
+            description:  `Commande ${num_commande}`,
+          });
+        }
         break;
       }
 
-      // ── Orange Money direct ───────────────────────────────
-      case 'orange':
-        result = await paiement.orange.initierPaiement({
-          order_id:    ref_id,
-          montant:     commande.total,
-          telephone:   commande.client_telephone || '',
-          description: `Commande ${num_commande}`,
-        });
+      // ── Orange Money direct (ou simulation) ───────────────
+      case 'orange': {
+        const tel = (req.body.telephone || commande.client_telephone || '').replace(/[^0-9]/g, '');
+        if (estSimulation()) {
+          result = await sim.orangeSim.initierPaiement({
+            order_id:    ref_id,
+            montant:     commande.total,
+            telephone:   tel,
+            description: `Commande ${num_commande}`,
+          });
+          result.simulation = true;
+        } else {
+          result = await paiement.orange.initierPaiement({
+            order_id:    ref_id,
+            montant:     commande.total,
+            telephone:   commande.client_telephone || '',
+            description: `Commande ${num_commande}`,
+          });
+        }
         break;
+      }
 
       // ── Stripe (cartes Visa/Mastercard) ──────────────────
       case 'stripe':
@@ -119,7 +157,7 @@ router.post('/initier', async (req, res) => {
       { $set: { paiement_ref: ref_id, paiement_methode: methode, paiement_statut: 'pending', updatedAt: new Date() } }
     );
 
-    res.json({ ok: true, methode, ...result });
+    res.json({ ok: true, methode, paiement_ref: ref_id, ...result });
   } catch (err) {
     console.error('Erreur paiement:', err.message);
     res.json({ ok: false, message: err.message || 'Erreur lors de l\'initiation du paiement.' });
@@ -140,7 +178,15 @@ router.get('/verifier/:ref', async (req, res) => {
       return res.json({ ok: true, statut: 'success', num_commande: commande.num_commande });
     }
 
-    const check = await paiement.verifier(commande.paiement_methode, req.params.ref);
+    const check = estSimulation() && ['mtn','orange','cinetpay'].includes(commande.paiement_methode)
+      ? await (() => {
+          switch (commande.paiement_methode) {
+            case 'mtn':      return sim.mtnSim.verifierPaiement(req.params.ref);
+            case 'orange':   return sim.orangeSim.verifierPaiement(req.params.ref);
+            case 'cinetpay': return sim.cinetpaySim.verifierPaiement(req.params.ref);
+          }
+        })()
+      : await paiement.verifier(commande.paiement_methode, req.params.ref);
 
     if (check.ok) {
       // Paiement confirmé → mettre à jour commande
@@ -157,6 +203,39 @@ router.get('/verifier/:ref', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.json({ ok: false, message: 'Erreur vérification.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────
+//  SIMULATION — Confirmer manuellement un paiement
+//  POST /paiement/simulation/confirmer
+//  Accessible uniquement quand le mode simulation est actif
+// ─────────────────────────────────────────────────────────
+router.post('/simulation/confirmer', async (req, res) => {
+  if (!estSimulation()) return res.json({ ok: false, message: 'Mode simulation inactif.' });
+  try {
+    const { reference, succes } = req.body;
+    const tx = sim.confirmerTransaction(reference, succes !== false);
+    if (!tx) return res.json({ ok: false, message: 'Transaction introuvable.' });
+
+    if (tx.statut === 'SUCCESSFUL') {
+      const commande = await db.commandes.findOneAsync({ paiement_ref: reference });
+      if (commande) {
+        await db.commandes.updateAsync(
+          { _id: commande._id },
+          { $set: { paiement_statut: 'success', paiement_confirme_at: new Date(), updatedAt: new Date() } }
+        );
+        const io = req.app.get('io');
+        if (io) io.to(`restaurant_${commande.restaurant_id}`).emit('paiement_confirme', {
+          num_commande: commande.num_commande,
+          methode: commande.paiement_methode,
+        });
+      }
+    }
+    res.json({ ok: true, statut: tx.statut });
+  } catch (err) {
+    console.error('Simulation confirmer:', err);
+    res.json({ ok: false, message: err.message });
   }
 });
 
