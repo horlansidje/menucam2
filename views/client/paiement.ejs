@@ -87,6 +87,54 @@
     .phone-input-wrap label{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:6px;display:block}
 
     @media(max-width:480px){.amount-value{font-size:1.8rem}}
+
+    /* ── MODE SIMULATION ───────────────────────────────── */
+    .sim-banner{background:linear-gradient(90deg,rgba(245,158,11,.12),rgba(249,115,22,.12));border:1.5px solid rgba(245,158,11,.4);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:1rem;font-size:13px;color:rgba(255,255,255,.8)}
+    .sim-banner i{color:#F59E0B;font-size:1rem;flex-shrink:0}
+    .sim-banner strong{color:#F59E0B}
+
+    /* Modale USSD */
+    .sim-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;display:none;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(6px)}
+    .sim-modal-overlay.open{display:flex}
+    .sim-modal{background:#0f172a;border:1.5px solid rgba(255,255,255,.1);border-radius:20px;width:100%;max-width:360px;overflow:hidden;animation:popIn .3s cubic-bezier(.34,1.56,.64,1)}
+    @keyframes popIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+
+    /* En-tête téléphone simulé */
+    .phone-topbar{background:#111827;padding:8px 16px;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:rgba(255,255,255,.4)}
+    .phone-carrier{font-weight:700;color:rgba(255,255,255,.6)}
+
+    /* Écran USSD */
+    .ussd-screen{padding:1.25rem 1.5rem;background:#111827;border-bottom:1px solid rgba(255,255,255,.06)}
+    .ussd-header{display:flex;align-items:center;gap:10px;margin-bottom:1rem}
+    .ussd-logo{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.4rem}
+    .ussd-title{font-size:13px;font-weight:700;color:#fff}
+    .ussd-subtitle{font-size:11px;color:rgba(255,255,255,.4)}
+    .ussd-body{background:rgba(255,255,255,.04);border-radius:10px;padding:14px;font-size:13px;line-height:1.7;color:rgba(255,255,255,.75)}
+    .ussd-body .ussd-amount{font-size:1.4rem;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;color:#F59E0B;display:block;margin:8px 0}
+    .ussd-body .ussd-merchant{font-weight:700;color:#fff}
+    .ussd-body .ussd-phone{color:rgba(255,255,255,.5);font-size:12px}
+
+    /* PIN fictif */
+    .pin-section{padding:1rem 1.5rem;background:#111827}
+    .pin-label{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:8px;text-align:center}
+    .pin-dots{display:flex;justify-content:center;gap:10px;margin-bottom:12px}
+    .pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.2);background:transparent;transition:background .2s}
+    .pin-dot.filled{background:#F59E0B;border-color:#F59E0B}
+    .pin-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .pin-key{background:rgba(255,255,255,.06);border:none;border-radius:10px;padding:12px;color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s}
+    .pin-key:active{background:rgba(245,158,11,.2)}
+    .pin-key.del{color:rgba(255,255,255,.5);font-size:13px}
+    .pin-key.confirm{background:#F59E0B;color:#111;font-size:12px;font-weight:800}
+    .pin-key.confirm:active{background:#D97706}
+    .pin-key.refuse{background:rgba(239,68,68,.12);color:#F87171;font-size:12px;font-weight:800;border:1px solid rgba(239,68,68,.2)}
+
+    /* Résultat simulation */
+    .sim-result{padding:1.5rem;text-align:center;display:none}
+    .sim-result.show{display:block}
+    .sim-result-icon{font-size:3rem;margin-bottom:.75rem}
+    .sim-result-title{font-family:'Bricolage Grotesque',sans-serif;font-size:1.2rem;font-weight:800;margin-bottom:.4rem}
+    .sim-result-sub{font-size:13px;color:rgba(255,255,255,.45)}
+    .sim-result-btn{margin-top:1rem;padding:12px 24px;border-radius:10px;border:none;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;width:100%}
   </style>
 </head>
 <body>
@@ -98,6 +146,13 @@
 </div>
 
 <div class="pay-body">
+
+  <% if (typeof sim_mode !== 'undefined' && sim_mode) { %>
+  <div class="sim-banner">
+    <i class="bi bi-cpu-fill"></i>
+    <div><strong>Mode démo actif</strong> — Les paiements MTN / Orange / CinetPay sont simulés. Aucune transaction réelle ne sera effectuée.</div>
+  </div>
+  <% } %>
 
   <!-- Montant -->
   <div class="card">
@@ -303,7 +358,181 @@ async function payer() {
   }
 }
 
-// Polling pour MTN MoMo (vérifie toutes les 5 secondes pendant 3 min)
+// ── SIMULATION ────────────────────────────────────────────
+const SIM_MODE = <%= (typeof sim_mode !== 'undefined' && sim_mode) ? 'true' : 'false' %>;
+let simRef = null;
+
+// Données des opérateurs pour l'UI modale
+const SIM_OPERATEURS = {
+  mtn: {
+    label: 'MTN Mobile Money',
+    logo: '📱',
+    bg: '#FFD200',
+    color: '#111',
+    carrier: 'MTN CM',
+    pin_hint: 'Entrez votre code PIN MTN MoMo',
+  },
+  orange: {
+    label: 'Orange Money',
+    logo: '🟠',
+    bg: '#FF6600',
+    color: '#fff',
+    carrier: 'Orange CM',
+    pin_hint: 'Entrez votre code PIN Orange Money',
+  },
+  cinetpay: {
+    label: 'CinetPay Mobile',
+    logo: '🌍',
+    bg: 'linear-gradient(135deg,#FFD700,#FFA500)',
+    color: '#111',
+    carrier: 'CinetPay',
+    pin_hint: 'Entrez votre code de confirmation',
+  },
+};
+
+function ouvrirSimModal(methode, reference, montant, telephone) {
+  const op = SIM_OPERATEURS[methode] || SIM_OPERATEURS.mtn;
+  simRef = reference;
+
+  // Reset état
+  document.getElementById('simPin').textContent = '';
+  document.getElementById('simResult').classList.remove('show');
+  document.getElementById('simUssd').style.display = '';
+  document.getElementById('simPinSection').style.display = '';
+  pinValeur = '';
+  rendrePinDots();
+
+  // Remplir les données
+  const tel = telephone || 'Votre numéro';
+  document.getElementById('simCarrier').textContent = op.carrier;
+  document.getElementById('simLogoEl').textContent = op.logo;
+  document.getElementById('simLogoEl').style.background = op.bg;
+  document.getElementById('simTitleEl').textContent = op.label;
+  document.getElementById('simMontantEl').textContent =
+    parseInt(montant || 0).toLocaleString('fr-FR') + ' FCFA';
+  document.getElementById('simMerchantEl').textContent = document.title.replace('Paiement · ','').replace('Paiement · ','') || 'MenuCam';
+  document.getElementById('simPhoneEl').textContent = 'Numéro : ' + tel;
+  document.getElementById('simPinLabel').textContent = op.pin_hint;
+
+  document.getElementById('simModal').classList.add('open');
+}
+
+// Clavier PIN simulé
+let pinValeur = '';
+function rendrePinDots() {
+  document.querySelectorAll('.pin-dot').forEach((d, i) => {
+    d.classList.toggle('filled', i < pinValeur.length);
+  });
+}
+function pinAppuyer(val) {
+  if (val === 'del') { pinValeur = pinValeur.slice(0, -1); rendrePinDots(); return; }
+  if (pinValeur.length >= 5) return;
+  pinValeur += val;
+  rendrePinDots();
+}
+
+async function simConfirmer(succes) {
+  if (!simRef) return;
+  document.getElementById('simUssd').style.display = 'none';
+  document.getElementById('simPinSection').style.display = 'none';
+
+  const res = document.getElementById('simResult');
+  res.classList.add('show');
+
+  if (succes) {
+    res.innerHTML = `
+      <div class="sim-result-icon">⏳</div>
+      <div class="sim-result-title" style="color:#F59E0B">Traitement…</div>
+      <div class="sim-result-sub">Communication avec le serveur…</div>`;
+  } else {
+    res.innerHTML = `
+      <div class="sim-result-icon">❌</div>
+      <div class="sim-result-title" style="color:#F87171">Paiement refusé</div>
+      <div class="sim-result-sub">Transaction annulée ou code incorrect.</div>
+      <button class="sim-result-btn" style="background:#1e293b;color:#fff;border:1px solid rgba(255,255,255,.1)"
+        onclick="document.getElementById('simModal').classList.remove('open');
+                 document.getElementById('btnPayer').disabled=false;">
+        Fermer
+      </button>`;
+  }
+
+  try {
+    const r = await fetch('/paiement/simulation/confirmer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reference: simRef, succes }),
+    });
+    const d = await r.json();
+
+    if (d.ok && succes) {
+      res.innerHTML = `
+        <div class="sim-result-icon">✅</div>
+        <div class="sim-result-title" style="color:#34D399">Paiement confirmé !</div>
+        <div class="sim-result-sub">Transaction validée avec succès.<br>Redirection en cours…</div>`;
+      setTimeout(() => window.location.href = '/commandes/suivi/' + NUM_COMMANDE, 2200);
+    }
+  } catch(e) {
+    if (succes) {
+      res.innerHTML = `
+        <div class="sim-result-icon">⚠️</div>
+        <div class="sim-result-title">Erreur réseau</div>
+        <div class="sim-result-sub">Impossible de confirmer la transaction.</div>
+        <button class="sim-result-btn" style="background:#1e293b;color:#fff" 
+          onclick="document.getElementById('simModal').classList.remove('open');
+                   document.getElementById('btnPayer').disabled=false;">Fermer</button>`;
+    }
+  }
+}
+
+// Surcharge de payer() pour les méthodes simulées
+const _payerOriginal = payer;
+async function payer() {
+  if (!SIM_MODE || !selectedMethod || !['mtn','orange','cinetpay'].includes(selectedMethod)) {
+    return _payerOriginal();
+  }
+
+  // Mode simulation : on initie, puis on ouvre la modale
+  const btn = document.getElementById('btnPayer');
+  btn.disabled = true;
+  showLoading('Initialisation du paiement…');
+
+  try {
+    const telephone =
+      selectedMethod === 'mtn'    ? document.getElementById('mtnPhone')?.value :
+      selectedMethod === 'orange' ? document.getElementById('orangePhone')?.value : '';
+
+    const body = { num_commande: NUM_COMMANDE, methode: selectedMethod, telephone };
+    const res  = await fetch('/paiement/initier', {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    hideLoading();
+
+    if (!data.ok) {
+      showToast('❌ ' + (data.message || 'Erreur'), 'error');
+      btn.disabled = false;
+      return;
+    }
+
+    // Récupérer la référence stockée en base
+    const cmdRes  = await fetch(`/paiement/verifier/${NUM_COMMANDE}_ref_check`).catch(() => null);
+    // On utilise le num_commande comme clé pour retrouver la ref
+    // La ref est dans paiement_ref de la commande — on la lit via un polling minimal
+    // Plutôt : on re-fetch depuis /commandes/suivi pour récupérer la ref
+    // Simplifié : on passe la ref que le backend a renvoyé dans la réponse
+    // (on s'assure que la route /initier retourne paiement_ref)
+    const montant = document.querySelector('.amount-value')?.textContent?.replace(/\s/g,'').replace('FCFA','') || '0';
+    const tel = telephone || '';
+
+    ouvrirSimModal(selectedMethod, data.paiement_ref || NUM_COMMANDE, montant.replace(/\D/g,''), tel);
+
+  } catch (err) {
+    hideLoading();
+    showToast('❌ Erreur réseau', 'error');
+    btn.disabled = false;
+  }
+}
+
 function demarrerPolling(ref) {
   let tentatives = 0;
   const maxTentatives = 36; // 3 minutes
@@ -325,4 +554,70 @@ function demarrerPolling(ref) {
   }, 5000);
 }
 </script>
+<!-- ════════════════════════════════════════════════
+     MODALE SIMULATION PAIEMENT MOBILE (MTN/Orange)
+     ════════════════════════════════════════════════ -->
+<% if (typeof sim_mode !== 'undefined' && sim_mode) { %>
+<div class="sim-modal-overlay" id="simModal">
+  <div class="sim-modal">
+
+    <!-- Barre status téléphone -->
+    <div class="phone-topbar">
+      <span class="phone-carrier" id="simCarrier">MTN CM</span>
+      <span>📶 LTE &nbsp; 🔋 84%</span>
+    </div>
+
+    <!-- Écran USSD -->
+    <div class="ussd-screen" id="simUssd">
+      <div class="ussd-header">
+        <div class="ussd-logo" id="simLogoEl">📱</div>
+        <div>
+          <div class="ussd-title" id="simTitleEl">MTN Mobile Money</div>
+          <div class="ussd-subtitle">Demande de paiement reçue</div>
+        </div>
+      </div>
+      <div class="ussd-body">
+        Vous avez reçu une demande de paiement de :<br>
+        <span class="ussd-merchant" id="simMerchantEl">MenuCam</span><br>
+        <span class="ussd-amount" id="simMontantEl">0 FCFA</span>
+        <span class="ussd-phone" id="simPhoneEl">Numéro : —</span>
+      </div>
+    </div>
+
+    <!-- Saisie PIN -->
+    <div class="pin-section" id="simPinSection">
+      <div class="pin-label" id="simPinLabel">Entrez votre code PIN pour confirmer</div>
+      <div class="pin-dots">
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+      </div>
+      <div id="simPin" style="display:none"></div>
+      <div class="pin-keypad">
+        <button class="pin-key" onclick="pinAppuyer('1')">1</button>
+        <button class="pin-key" onclick="pinAppuyer('2')">2</button>
+        <button class="pin-key" onclick="pinAppuyer('3')">3</button>
+        <button class="pin-key" onclick="pinAppuyer('4')">4</button>
+        <button class="pin-key" onclick="pinAppuyer('5')">5</button>
+        <button class="pin-key" onclick="pinAppuyer('6')">6</button>
+        <button class="pin-key" onclick="pinAppuyer('7')">7</button>
+        <button class="pin-key" onclick="pinAppuyer('8')">8</button>
+        <button class="pin-key" onclick="pinAppuyer('9')">9</button>
+        <button class="pin-key refuse" onclick="simConfirmer(false)">✕ Refuser</button>
+        <button class="pin-key" onclick="pinAppuyer('0')">0</button>
+        <button class="pin-key del" onclick="pinAppuyer('del')">⌫</button>
+      </div>
+      <button class="pin-key confirm" style="width:100%;margin-top:10px;padding:14px"
+        onclick="simConfirmer(true)">✓ Valider le paiement</button>
+    </div>
+
+    <!-- Résultat -->
+    <div class="sim-result" id="simResult"></div>
+
+  </div>
+</div>
+<% } %>
+
 </body></html>
